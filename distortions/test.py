@@ -6,7 +6,7 @@ import torch
 import wandb 
 
 from distortions.model.custom_resnet import CustomResNet
-from distortions.utils.functions import validate_epoch  # se quiser manter o uso atual
+from distortions.utils.functions import get_backbone_and_weights, validate_epoch  # se quiser manter o uso atual
 
 def test_model(folder_path="/home/jmn/host/dev/Datasets/IQA/LIVE/",
                weight_path="distortions_10_resnet50_b16_lr1e-4.pth", name_model="resnet50"):
@@ -29,17 +29,7 @@ def test_model(folder_path="/home/jmn/host/dev/Datasets/IQA/LIVE/",
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # --- Modelo ---
-    if name_model == 'resnet_50':
-        backbone = models.resnet50
-        weights = models.ResNet50_Weights.IMAGENET1K_V2
-    elif name_model == 'resnet_101':
-        backbone = models.resnet101
-        weights = models.ResNet101_Weights.IMAGENET1K_V2
-    elif name_model == 'resnet_152':
-        backbone = models.resnet152
-        weights = models.ResNet152_Weights.IMAGENET1K_V2
-    else:
-        raise ValueError(f"Modelo desconhecido: {name_model}, escolha entre 'resnet_50', 'resnet_101' ou 'resnet_152'.")
+    backbone, weights = get_backbone_and_weights(name_model=name_model)
     
     model = CustomResNet(num_classes=7, backbone=backbone, weights=weights)
     model.load_state_dict(torch.load(weight_path, map_location=device))

@@ -3,9 +3,8 @@ import torch.nn as nn
 import torch.optim as optim
 import wandb
 from distortions.model.custom_resnet import CustomResNet
-from distortions.utils.functions import train_epoch, validate_epoch
+from distortions.utils.functions import get_backbone_and_weights, train_epoch, validate_epoch
 from distortions.dataset.dataset import get_dataloaders  # supondo que você tenha essa função
-from torchvision import models
 
 def main(model, backbone, train_loader, val_loader, device, num_epochs, lr):
     best_acc = 0.0
@@ -77,17 +76,7 @@ def train_model(
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    if backbone == 'resnet_50':
-        back = models.resnet50
-        weights = models.ResNet50_Weights.IMAGENET1K_V2
-    elif backbone == 'resnet_101':
-        back = models.resnet101
-        weights = models.ResNet101_Weights.IMAGENET1K_V2
-    elif backbone == 'resnet_152':
-        back = models.resnet152
-        weights = models.ResNet152_Weights.IMAGENET1K_V2
-    else:
-        raise ValueError(f"Modelo desconhecido: {model}, escolha entre 'resnet_50', 'resnet_101' ou 'resnet_152'.")
+    back, weights = get_backbone_and_weights(name_model=backbone)
 
     model = CustomResNet(
         num_classes=7,

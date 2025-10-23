@@ -1,5 +1,25 @@
 import torch
 import numpy as np
+from torchvision import models
+
+def get_backbone_and_weights(name_model='resnet_50'):
+    if name_model == 'resnet_18':
+        back = models.resnet18
+        weights = models.ResNet18_Weights.IMAGENET1K_V1
+    if name_model == 'resnet_34':
+        back = models.resnet34
+        weights = models.ResNet34_Weights.IMAGENET1K_V1
+    elif name_model == 'resnet_50':
+        back = models.resnet50
+    elif name_model == 'resnet_101':
+        back = models.resnet101
+        weights = models.ResNet101_Weights.IMAGENET1K_V2
+    elif name_model == 'resnet_152':
+        back = models.resnet152
+        weights = models.ResNet152_Weights.IMAGENET1K_V2
+    else:
+        raise ValueError(f"Modelo desconhecido: {name_model}, escolha entre 'resnet_18', 'resnet_34', 'resnet_50', 'resnet_101' ou 'resnet_152'.")
+    return back, weights
 
 def train_epoch(model, train_loader, criterion, optimizer, device):
     model.train()
