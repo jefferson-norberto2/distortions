@@ -40,7 +40,7 @@ def flip_image(image_path: str, flip_type: str = 'horizontal') -> Image.Image:
         return None
 
 
-def flip_images_in_directory(directory: str = '/home/jmn/host/dev/Datasets/IQA/ECSIQ/') -> None:
+def flip_images_in_directory(directory: str = '/home/jmn/host/dev/Datasets/IQA/ECSIQ/', types = ['horizontal', 'vertical', 'both']) -> None:
     main_directory = directory
 
     print("🚀 Iniciando o script de flip de imagens...")
@@ -58,22 +58,16 @@ def flip_images_in_directory(directory: str = '/home/jmn/host/dev/Datasets/IQA/E
 
                 if file_name.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp', '.tiff')):
                     
-                    horizontal_image = flip_image(file_path, flip_type='horizontal')
-                    vertical_image = flip_image(file_path, flip_type='vertical')
-                    both_image = flip_image(file_path, flip_type='both')
+                    for flip_type in types:
 
-                    if horizontal_image:
-                        horizontal_name = f"horizontal_{file_name}"
-                        vertical_name = f"vertical_{file_name}"
-                        both_name = f"both_{file_name}"
-                        
-                        horizontal_path = os.path.join(folder_path, horizontal_name)
-                        vertical_path = os.path.join(folder_path, vertical_name)
-                        both_path = os.path.join(folder_path, both_name)
-                        
-                        horizontal_image.save(horizontal_path)
-                        vertical_image.save(vertical_path)
-                        both_image.save(both_path)
+                        fliped_image = flip_image(file_path, flip_type=flip_type)
+
+                        if fliped_image:
+                            fliped_name = f"{flip_type}_{file_name}"
+                            
+                            fliped_path = os.path.join(folder_path, fliped_name)
+                            
+                            fliped_image.save(fliped_path)
             
 if __name__ == "__main__":
-    flip_images_in_directory('/home/jmn/host/dev/Datasets/IQA/ECSIQ/')
+    flip_images_in_directory('/home/jmn/host/dev/Datasets/IQA/ECSIQ_rotation/', types=['vertical'])
