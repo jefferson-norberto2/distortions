@@ -70,7 +70,7 @@ for nome_da_pasta in tqdm(os.listdir(diretorio_principal)):
                     # print(f"     ✅ Salvo como: {novo_nome_horizontal}")
 
                     # --- FLIP VERTICAL + HORIZONTAL ---
-                    # 8. Cria uma nova imagem com o flip horizontal a partir da ORIGINAL.
+                    # 8. Cria uma nova imagem com o flip horizontal a partir da VERTICAL.
                     img_both = img_vertical.transpose(Image.FLIP_LEFT_RIGHT)
                     
                     # 9. Define o novo nome para a imagem com flip horizontal.
@@ -78,7 +78,7 @@ for nome_da_pasta in tqdm(os.listdir(diretorio_principal)):
                     caminho_salvar_both = os.path.join(caminho_da_pasta, novo_nome_both)
 
                     # 10. Salva a nova imagem.
-                    img_horizontal.save(caminho_salvar_both)
+                    img_both.save(caminho_salvar_both)
                     # print(f"     ✅ Salvo como: {novo_nome_both}")
 
             except IOError:
