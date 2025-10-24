@@ -8,7 +8,7 @@ import wandb
 from distortions.model.custom_resnet import CustomResNet
 from distortions.utils.functions import get_backbone_and_weights, validate_epoch  # se quiser manter o uso atual
 
-def test_model(folder_path="/home/jmn/host/dev/Datasets/IQA/LIVE/",
+def test_model(folder_path="/home/jmn/dev/Datasets/IQA/LIVE/",
                weight_path="distortions_10_resnet50_b16_lr1e-4.pth", name_model="resnet50"):
     
     # --- Inicializa o W&B ---

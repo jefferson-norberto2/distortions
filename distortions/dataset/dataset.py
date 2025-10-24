@@ -3,7 +3,7 @@ from torch.utils.data import DataLoader, random_split
 from torchvision import datasets, transforms
 from torch import Generator
 
-def get_dataloaders(data_dir="/home/jmn/host/dev/Datasets/IQA/ECSIQ/", train_split=0.8, image_shape=(256,256), batch_size=16):
+def get_dataloaders(data_dir="/home/jmn/dev/Datasets/IQA/ECSIQ/", train_split=0.8, image_shape=(256,256), batch_size=16):
     transform = transforms.Compose([
             transforms.Resize(image_shape),
             transforms.ToTensor(),
