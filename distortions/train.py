@@ -60,7 +60,7 @@ def main(model, backbone, train_loader, val_loader, device, num_epochs, lr):
 
 def train_model(
     backbone='resnet_50',
-    data_dir="/home/jmn/host/dev/Datasets/IQA/ECSIQ/",
+    data_dir="/home/jmn/dev/Datasets/IQA/ECSIQ/",
     train_split=0.7,
     image_shape=(256, 256),
     batch_size=16,
