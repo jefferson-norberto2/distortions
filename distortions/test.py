@@ -1,14 +1,16 @@
-from torchvision import datasets, transforms, models
-from torch.utils.data import DataLoader
-from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 import matplotlib.pyplot as plt
 import torch
 import wandb 
+import time
+import os
 
+from torchvision import datasets, transforms
+from torch.utils.data import DataLoader
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 from distortions.model.custom_resnet import CustomResNet
 from distortions.utils.functions import get_backbone_and_weights, validate_epoch  # se quiser manter o uso atual
 
-def test_model(folder_path="/home/jmn/dev/Datasets/IQA/LIVE/",
+def test_model(folder_path="/home/jmn/host/dev/Datasets/IQA/ELIVE/",
                weight_path="distortions_10_resnet50_b16_lr1e-4.pth", name_model="resnet50"):
     
     # --- Inicializa o W&B ---
@@ -22,7 +24,7 @@ def test_model(folder_path="/home/jmn/dev/Datasets/IQA/LIVE/",
 
     # --- Dataset e DataLoader ---
     dataset = datasets.ImageFolder(root=folder_path, transform=transform)
-    val_loader = DataLoader(dataset, batch_size=1, shuffle=False)
+    val_loader = DataLoader(dataset, batch_size=20, shuffle=False)
     class_names = dataset.classes  # nomes das classes
 
     # --- Dispositivo ---
@@ -38,9 +40,9 @@ def test_model(folder_path="/home/jmn/dev/Datasets/IQA/LIVE/",
 
     # --- Avaliação ---
     criterion = torch.nn.CrossEntropyLoss()
-    val_loss, val_acc = validate_epoch(model, val_loader, criterion, device)
-    print(f"| Val Loss: {val_loss:.4f}, Val Acc: {val_acc:.2f}%")
-    wandb.log({"val_loss": val_loss, "val_acc": val_acc})
+    val_loss, val_acc, precision, recall = validate_epoch(model, val_loader, criterion, device)
+    print(f"| Val Loss: {val_loss:.4f}, Val Acc: {val_acc:.2f}%, Precision: {precision:.4f}, Recall: {recall:.4f} |")
+    wandb.log({"val_loss": val_loss, "val_acc": val_acc, "val_precision": precision, "val_recall": recall})
 
     # --- Geração da matriz de confusão ---
     all_preds = []
@@ -58,14 +60,18 @@ def test_model(folder_path="/home/jmn/dev/Datasets/IQA/LIVE/",
     cm = confusion_matrix(all_labels, all_preds)
     disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=class_names)
 
+    time_stamp = time.strftime("%Y%m%d-%H%M%S")
+    save_dir = f"runs/test/{time_stamp}"
+    os.makedirs(save_dir, exist_ok=True)
+
     # --- Visualização ---
     fig, ax = plt.subplots(figsize=(8, 8))
     disp.plot(ax=ax, cmap='Blues', values_format='d', colorbar=False)
     plt.title(f"Matriz de Confusão - {name_model}")
     plt.xticks(rotation=45)
     plt.tight_layout()
-    plt.savefig(f"confusion_matrix_{name_model}.png", dpi=300)
-    wandb.log({f"confusion_matrix_{name_model}": wandb.Image(f"confusion_matrix_{name_model}.png")})
+    plt.savefig(f"{save_dir}/confusion_matrix_{name_model}.png", dpi=300)
+    wandb.log({f"confusion_matrix_{name_model}": wandb.Image(f"{save_dir}/confusion_matrix_{name_model}.png")})
 
 if __name__ == '__main__':
     test_model()

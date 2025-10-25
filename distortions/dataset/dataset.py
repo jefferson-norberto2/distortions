@@ -3,7 +3,7 @@ from torch.utils.data import DataLoader, random_split
 from torchvision import datasets, transforms
 from torch import Generator
 
-def get_dataloaders(data_dir="/home/jmn/host/dev/Datasets/IQA/ECSIQ/", train_split=0.8, image_shape=(256,256), batch_size=16):
+def get_dataloaders(data_dir="/home/jmn/host/dev/Datasets/IQA/ECSIQ/", train_split=0.8, image_shape=(256,256), batch_size=16) -> tuple[DataLoader, DataLoader]:
 	transform = transforms.Compose([
 			transforms.ToTensor(),
 	])
@@ -22,6 +22,6 @@ def get_dataloaders(data_dir="/home/jmn/host/dev/Datasets/IQA/ECSIQ/", train_spl
 	print(f"🧪 Tamanho do conjunto de validação: {len(val_dataset)} imagens")
 
 	train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-	val_loader   = DataLoader(val_dataset, batch_size=1, shuffle=False)
+	val_loader   = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
 
 	return train_loader, val_loader

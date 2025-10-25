@@ -1,6 +1,8 @@
 import torch
 import numpy as np
 from torchvision import models
+from tqdm import tqdm
+from sklearn.metrics import precision_score, recall_score, accuracy_score, confusion_matrix
 
 def get_backbone_and_weights(name_model='resnet_50'):
     if name_model == 'resnet_18':
@@ -44,20 +46,12 @@ def class_distribution(dataset, train_dataset, val_dataset):
     for i, cls in enumerate(class_names):
         print(f"{cls:15s} | Treino: {train_counts[i]} | Validação: {val_counts[i]} | Total: {train_counts[i] + val_counts[i]}")
 
-from tqdm import tqdm
-import torch
-import torch.nn as nn
-import torch.optim as optim
-import wandb
-from distortions.model.custom_resnet import CustomResNet
-from distortions.utils.functions import get_backbone_and_weights
-from distortions.dataset.dataset import get_dataloaders
 
 def train_epoch(model, train_loader, criterion, optimizer, device):
     model.train()
-    running_loss, correct, total = 0.0, 0, 0
+    running_loss, total = 0.0, 0
+    all_preds, all_labels = [], []
 
-    # tqdm cria a barra de progresso
     progress_bar = tqdm(train_loader, desc="Treinando", leave=False, dynamic_ncols=True)
 
     for images, labels in progress_bar:
@@ -72,21 +66,29 @@ def train_epoch(model, train_loader, criterion, optimizer, device):
         running_loss += loss.item() * images.size(0)
         _, predicted = outputs.max(1)
         total += labels.size(0)
-        correct += predicted.eq(labels).sum().item()
 
-        # Atualiza o texto mostrado na barra
+        # Armazena para métricas
+        all_preds.extend(predicted.cpu().numpy())
+        all_labels.extend(labels.cpu().numpy())
+
+        # Atualiza a barra
         current_loss = running_loss / total
-        current_acc = 100. * correct / total
-        progress_bar.set_postfix(loss=f"{current_loss:.4f}", acc=f"{current_acc:.2f}%")
+        current_acc = accuracy_score(all_labels, all_preds) * 100
+        precision = precision_score(all_labels, all_preds, average="macro", zero_division=0) * 100
+        recall = recall_score(all_labels, all_preds, average="macro", zero_division=0) * 100
+        progress_bar.set_postfix(loss=f"{current_loss:.4f}", acc=f"{current_acc:.2f}%", precision=f"{precision:.2f}%", recall=f"{recall:.2f}%")
 
+    # Cálculos finais
     train_loss = running_loss / len(train_loader.dataset)
-    train_acc = 100. * correct / total
-    return train_loss, train_acc
+    
+ 
+    return train_loss, current_acc, precision, recall
 
 
 def validate_epoch(model, val_loader, criterion, device):
     model.eval()
-    running_loss, correct, total = 0.0, 0, 0
+    running_loss, total = 0.0, 0
+    all_preds, all_labels = [], []
 
     with torch.no_grad():
         progress_bar = tqdm(val_loader, desc="Validando", leave=False, dynamic_ncols=True)
@@ -98,12 +100,18 @@ def validate_epoch(model, val_loader, criterion, device):
             running_loss += loss.item() * images.size(0)
             _, predicted = outputs.max(1)
             total += labels.size(0)
-            correct += predicted.eq(labels).sum().item()
+
+            # Armazena para métricas
+            all_preds.extend(predicted.cpu().numpy())
+            all_labels.extend(labels.cpu().numpy())
 
             current_loss = running_loss / total
-            current_acc = 100. * correct / total
-            progress_bar.set_postfix(loss=f"{current_loss:.4f}", acc=f"{current_acc:.2f}%")
+            current_acc = accuracy_score(all_labels, all_preds) * 100
+            precision = precision_score(all_labels, all_preds, average="macro", zero_division=0) * 100
+            recall = recall_score(all_labels, all_preds, average="macro", zero_division=0) * 100
+            progress_bar.set_postfix(loss=f"{current_loss:.4f}", acc=f"{current_acc:.2f}%", precision=f"{precision:.2f}%", recall=f"{recall:.2f}%")
 
     val_loss = running_loss / len(val_loader.dataset)
-    val_acc = 100. * correct / total
-    return val_loss, val_acc
+    
+
+    return val_loss, current_acc, precision, recall

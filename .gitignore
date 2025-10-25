@@ -4,6 +4,7 @@ __pycache__/
 *$py.class
 
 wandb/
+runs/
 
 *.pth
 confusion_matrix*.png
