@@ -21,52 +21,6 @@ def get_backbone_and_weights(name_model='resnet_50'):
         raise ValueError(f"Modelo desconhecido: {name_model}, escolha entre 'resnet_18', 'resnet_34', 'resnet_50', 'resnet_101' ou 'resnet_152'.")
     return back, weights
 
-def train_epoch(model, train_loader, criterion, optimizer, device):
-    model.train()
-    running_loss = 0.0
-    correct = 0
-    total = 0
-
-    for images, labels in train_loader:
-        images, labels = images.to(device), labels.to(device)
-
-        optimizer.zero_grad()
-        outputs = model(images)
-        loss = criterion(outputs, labels)
-        loss.backward()
-        optimizer.step()
-
-        running_loss += loss.item() * images.size(0)
-        _, predicted = outputs.max(1)
-        total += labels.size(0)
-        correct += predicted.eq(labels).sum().item()
-
-    train_loss = running_loss / len(train_loader.dataset)
-    train_acc = 100. * correct / total
-    return train_loss, train_acc
-
-def validate_epoch(model, val_loader, criterion, device):
-    model.eval()
-    val_loss = 0.0
-    val_correct = 0
-    val_total = 0
-
-    with torch.no_grad():
-        for images, labels in val_loader:
-            images, labels = images.to(device), labels.to(device)
-            outputs = model(images)
-            loss = criterion(outputs, labels)
-
-            val_loss += loss.item() * images.size(0)
-            _, predicted = outputs.max(1)
-            val_total += labels.size(0)
-            val_correct += predicted.eq(labels).sum().item()
-
-    val_loss /= len(val_loader.dataset)
-    val_acc = 100. * val_correct / val_total
-    return val_loss, val_acc
-
-
 def class_distribution(dataset, train_dataset, val_dataset):
     # classes do dataset
     class_names = dataset.classes
@@ -89,3 +43,67 @@ def class_distribution(dataset, train_dataset, val_dataset):
     print("Distribuição por classe:\n")
     for i, cls in enumerate(class_names):
         print(f"{cls:15s} | Treino: {train_counts[i]} | Validação: {val_counts[i]} | Total: {train_counts[i] + val_counts[i]}")
+
+from tqdm import tqdm
+import torch
+import torch.nn as nn
+import torch.optim as optim
+import wandb
+from distortions.model.custom_resnet import CustomResNet
+from distortions.utils.functions import get_backbone_and_weights
+from distortions.dataset.dataset import get_dataloaders
+
+def train_epoch(model, train_loader, criterion, optimizer, device):
+    model.train()
+    running_loss, correct, total = 0.0, 0, 0
+
+    # tqdm cria a barra de progresso
+    progress_bar = tqdm(train_loader, desc="Treinando", leave=False, dynamic_ncols=True)
+
+    for images, labels in progress_bar:
+        images, labels = images.to(device), labels.to(device)
+
+        optimizer.zero_grad()
+        outputs = model(images)
+        loss = criterion(outputs, labels)
+        loss.backward()
+        optimizer.step()
+
+        running_loss += loss.item() * images.size(0)
+        _, predicted = outputs.max(1)
+        total += labels.size(0)
+        correct += predicted.eq(labels).sum().item()
+
+        # Atualiza o texto mostrado na barra
+        current_loss = running_loss / total
+        current_acc = 100. * correct / total
+        progress_bar.set_postfix(loss=f"{current_loss:.4f}", acc=f"{current_acc:.2f}%")
+
+    train_loss = running_loss / len(train_loader.dataset)
+    train_acc = 100. * correct / total
+    return train_loss, train_acc
+
+
+def validate_epoch(model, val_loader, criterion, device):
+    model.eval()
+    running_loss, correct, total = 0.0, 0, 0
+
+    with torch.no_grad():
+        progress_bar = tqdm(val_loader, desc="Validando", leave=False, dynamic_ncols=True)
+        for images, labels in progress_bar:
+            images, labels = images.to(device), labels.to(device)
+            outputs = model(images)
+            loss = criterion(outputs, labels)
+
+            running_loss += loss.item() * images.size(0)
+            _, predicted = outputs.max(1)
+            total += labels.size(0)
+            correct += predicted.eq(labels).sum().item()
+
+            current_loss = running_loss / total
+            current_acc = 100. * correct / total
+            progress_bar.set_postfix(loss=f"{current_loss:.4f}", acc=f"{current_acc:.2f}%")
+
+    val_loss = running_loss / len(val_loader.dataset)
+    val_acc = 100. * correct / total
+    return val_loss, val_acc
