@@ -14,7 +14,6 @@ def main(model, backbone, train_loader, val_loader, device, num_epochs, lr):
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=lr)
 
-    # --- Inicializa o W&B ---
     wandb.init(
         project="distortions-detect",
         config={
@@ -25,21 +24,22 @@ def main(model, backbone, train_loader, val_loader, device, num_epochs, lr):
             "optimizer": "Adam",
             "criterion": "CrossEntropyLoss",
             "dataset": "ECSIQ",
+            "train_size": len(train_loader.dataset),
+            "val_size": len(val_loader.dataset),
         },
         name=f"training_{backbone}"
     )
 
     for epoch in range(num_epochs):
+        print(f"\nEpoch [{epoch+1}/{num_epochs}]")
+
         train_loss, train_acc = train_epoch(model, train_loader, criterion, optimizer, device)
         val_loss, val_acc = validate_epoch(model, val_loader, criterion, device)
 
-        print(f"Epoch [{epoch+1}/{num_epochs}] "
-              f"Train Loss: {train_loss:.4f}, Train Acc: {train_acc:.2f}% "
+        print(f"  ➤ Train Loss: {train_loss:.4f}, Train Acc: {train_acc:.2f}% "
               f"| Val Loss: {val_loss:.4f}, Val Acc: {val_acc:.2f}%")
 
-        # --- Log no W&B ---
         wandb.log({
-            "epoch": epoch + 1,
             "train_loss": train_loss,
             "train_acc": train_acc,
             "val_loss": val_loss,
@@ -47,12 +47,14 @@ def main(model, backbone, train_loader, val_loader, device, num_epochs, lr):
             "lr": optimizer.param_groups[0]["lr"],
         })
 
-        # --- Salva o melhor modelo ---
         if val_acc > best_acc and val_loss < best_loss:
-            best_acc = val_acc
-            best_loss = val_loss
+            best_acc, best_loss = val_acc, val_loss
             model_path = f"best_distortions_{epoch+1}_{backbone}_b16_lr1e-4.pth"
             torch.save(model.state_dict(), model_path)
+
+        if (epoch + 1) % 5 == 0:
+            for param_group in optimizer.param_groups:
+                param_group['lr'] *= 0.5
 
     wandb.finish()
     return model_path
