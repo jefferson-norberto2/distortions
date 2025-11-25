@@ -1,0 +1,1 @@
+docker build -t distortions:latest -f .docker/Dockerfile .

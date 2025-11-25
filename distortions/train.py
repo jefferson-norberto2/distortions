@@ -7,9 +7,9 @@ import os
 
 from distortions.model.custom_resnet import CustomResNet
 from distortions.utils.functions import get_backbone_and_weights, train_epoch, validate_epoch
-from distortions.dataset.dataset import get_dataloaders  
+from distortions.dataset.dataloaders import get_dataloaders  
 
-def main(model, backbone, train_loader, val_loader, device, num_epochs, lr, wandb_enable):
+def main(model, backbone, dataset_name, train_loader, val_loader, device, num_epochs, lr, wandb_enable):
     best_acc = 0.0
     best_loss = float("inf")
     model_path = ""
@@ -25,9 +25,9 @@ def main(model, backbone, train_loader, val_loader, device, num_epochs, lr, wand
             "epochs": num_epochs,
             "learning_rate": lr,
             "batch_size": train_loader.batch_size,
-            "optimizer": "Adam",
-            "criterion": "CrossEntropyLoss",
-            "dataset": "ECSIQ",
+            "optimizer": type(optimizer).__name__,
+            "criterion": criterion._get_name(),
+            "dataset": dataset_name,
             "train_size": len(train_loader.dataset),
             "val_size": len(val_loader.dataset),
         },
@@ -81,7 +81,6 @@ def train_model(
     backbone='resnet_50',
     data_dir="/home/jmn/host/dev/Datasets/IQA/ECSIQ/",
     train_split=0.7,
-    image_shape=(256, 256),
     batch_size=32,
     lr=1e-4,
     num_epochs=10,
@@ -90,7 +89,6 @@ def train_model(
     train_loader, val_loader = get_dataloaders(
         data_dir=data_dir, 
         train_split=train_split, 
-        image_shape=image_shape, 
         batch_size=batch_size
     )
 
@@ -104,7 +102,9 @@ def train_model(
         weights=weights
     ).to(device)
 
-    return main(model, backbone, train_loader, val_loader, device, num_epochs, lr, wandb_enable)
+    dataset_name = data_dir.strip('/').split('/')[-1]
+
+    return main(model, backbone, dataset_name, train_loader, val_loader, device, num_epochs, lr, wandb_enable)
 
 
     

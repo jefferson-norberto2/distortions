@@ -2,7 +2,7 @@ import torch
 import numpy as np
 from torchvision import models
 from tqdm import tqdm
-from sklearn.metrics import precision_score, recall_score, accuracy_score, confusion_matrix
+from sklearn.metrics import precision_score, recall_score, accuracy_score
 
 def get_backbone_and_weights(name_model='resnet_50'):
     if name_model == 'resnet_18':

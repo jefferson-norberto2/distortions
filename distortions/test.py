@@ -11,14 +11,15 @@ from distortions.model.custom_resnet import CustomResNet
 from distortions.utils.functions import get_backbone_and_weights, validate_epoch  # se quiser manter o uso atual
 
 def test_model(folder_path="/home/jmn/host/dev/Datasets/IQA/ELIVE/",
-               weight_path="distortions_10_resnet50_b16_lr1e-4.pth", name_model="resnet50"):
+               weight_path="distortions_10_resnet50_b16_lr1e-4.pth", 
+               name_model="resnet50", wandb_enable=False,
+               ):
     
     # --- Inicializa o W&B ---
-    wandb.init(project="distortions-detect", name=f"evaluation_{name_model}")
+    wandb.init(project="distortions-detect", name=f"evaluation_{name_model}", mode="online" if wandb_enable else "disabled")
     
     # --- Transformação das imagens ---
     transform = transforms.Compose([
-        transforms.CenterCrop((256, 256)),
         transforms.ToTensor(),
     ])
 
