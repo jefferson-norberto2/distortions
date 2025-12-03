@@ -7,7 +7,7 @@ import os
 from torchvision import datasets, transforms
 from torch.utils.data import DataLoader
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
-from distortions.model.custom_resnet import CustomResNet
+from distortions.model.custom_resnet import CustomResNet, CustomInception
 from distortions.utils.functions import get_backbone_and_weights, validate_epoch  # se quiser manter o uso atual
 
 def test_model(folder_path="/home/jmn/host/dev/Datasets/IQA/ELIVE/",
@@ -20,6 +20,7 @@ def test_model(folder_path="/home/jmn/host/dev/Datasets/IQA/ELIVE/",
     
     # --- Transformação das imagens ---
     transform = transforms.Compose([
+        transforms.CenterCrop(299),
         transforms.ToTensor(),
     ])
 
@@ -34,7 +35,10 @@ def test_model(folder_path="/home/jmn/host/dev/Datasets/IQA/ELIVE/",
     # --- Modelo ---
     backbone, weights = get_backbone_and_weights(name_model=name_model)
     
-    model = CustomResNet(num_classes=7, backbone=backbone, weights=weights)
+    if name_model == 'inception_v3':
+        model = CustomInception(num_classes=7, backbone=backbone, weights=weights, training=False)
+    else:
+        model = CustomResNet(num_classes=7, backbone=backbone, weights=weights)
     model.load_state_dict(torch.load(weight_path, map_location=device))
     model = model.to(device)
     model.eval()

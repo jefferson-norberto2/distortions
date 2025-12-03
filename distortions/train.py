@@ -5,13 +5,13 @@ import wandb
 import time
 import os
 
-from distortions.model.custom_resnet import CustomResNet
+from distortions.model.custom_resnet import CustomResNet, CustomInception
 from distortions.utils.functions import get_backbone_and_weights, train_epoch, validate_epoch
 from distortions.dataset.dataloaders import get_dataloaders  
 
-def main(model, backbone, dataset_name, train_loader, val_loader, device, num_epochs, lr, wandb_enable):
+def main(model, backbone, dataset_name, train_loader, val_loader, device, num_epochs, lr, wandb_enable) -> str:
     best_acc = 0.0
-    best_loss = float("inf")
+    best_loss = 100.00
     model_path = ""
 
     criterion = nn.CrossEntropyLoss()
@@ -65,7 +65,6 @@ def main(model, backbone, dataset_name, train_loader, val_loader, device, num_ep
 
         if val_acc > best_acc and val_loss < best_loss:
             best_acc, best_loss = val_acc, val_loss
-            # Take the batch size from the DataLoader
             model_path = f"{save_dir}/best_distortion_{epoch+1}.pth"
             torch.save(model.state_dict(), model_path)
 
@@ -96,11 +95,19 @@ def train_model(
 
     back, weights = get_backbone_and_weights(name_model=backbone)
 
-    model = CustomResNet(
-        num_classes=7,
-        backbone=back,
-        weights=weights
-    ).to(device)
+    if backbone.lower() == "inception_v3":
+        model = CustomInception(
+            num_classes=7,
+            backbone=back,
+            weights=weights,
+            training=True
+        ).to(device)
+    else:
+        model = CustomResNet(
+            num_classes=7,
+            backbone=back,
+            weights=weights
+        ).to(device)
 
     dataset_name = data_dir.strip('/').split('/')[-1]
 
