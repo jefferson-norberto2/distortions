@@ -12,7 +12,7 @@ from distortions.utils.functions import get_backbone_and_weights, validate_epoch
 
 def test_model(folder_path="/home/jmn/host/dev/Datasets/IQA/ELIVE/",
                weight_path="distortions_10_resnet50_b16_lr1e-4.pth", 
-               name_model="resnet50", wandb_enable=False,
+               name_model="resnet50", wandb_enable=False, batch_size=24
                ):
     
     # --- Inicializa o W&B ---
@@ -20,13 +20,13 @@ def test_model(folder_path="/home/jmn/host/dev/Datasets/IQA/ELIVE/",
     
     # --- Transformação das imagens ---
     transform = transforms.Compose([
-        transforms.CenterCrop(299),
+        #transforms.CenterCrop(299),
         transforms.ToTensor(),
     ])
 
     # --- Dataset e DataLoader ---
     dataset = datasets.ImageFolder(root=folder_path, transform=transform)
-    val_loader = DataLoader(dataset, batch_size=20, shuffle=False)
+    val_loader = DataLoader(dataset, batch_size=batch_size, shuffle=False)
     class_names = dataset.classes  # nomes das classes
 
     # --- Dispositivo ---

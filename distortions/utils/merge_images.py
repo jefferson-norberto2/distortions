@@ -38,4 +38,4 @@ def merge_rotated_images(original_root: str):
     print("\n✅ Todos os arquivos foram processados!")
 
 if __name__ == "__main__":
-    merge_rotated_images('/home/jmn/host/dev/Datasets/IQA/ECSIQ/')
+    merge_rotated_images('/home/jmn/Dev/python/distortions/data/ECSIQv3/')

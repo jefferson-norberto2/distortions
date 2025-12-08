@@ -13,10 +13,11 @@ def split_image(file_name, folder_path):
 
     # Coordenadas dos recortes (x0, y0, x1, y1)
     boxes = [
-        (0, 0, 256, 256),       # superior esquerda
-        (256, 0, 512, 256),     # superior direita
-        (0, 256, 256, 512),     # inferior esquerda
-        (256, 256, 512, 512)    # inferior direita
+        (0, 0, 299, 299),       # superior esquerda
+        (213, 0, 512, 299),     # superior direita
+        (0, 213, 299, 512),     # inferior esquerda
+        (213, 213, 512, 512),   # inferior direita
+        (106, 106, 405, 405)    # centro
     ]
 
     # Faz os recortes e salva
@@ -53,4 +54,4 @@ def split_images_in_directory(root_directory: str) -> None:
                         print(f"Erro ao processar {file_path}: {e}")
 
 if __name__ == "__main__":
-    split_images_in_directory('/home/jmn/host/dev/Datasets/IQA/ECSIQ/')
+    split_images_in_directory('/home/jmn/Dev/python/distortions/data/ECSIQv3')

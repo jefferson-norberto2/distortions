@@ -13,9 +13,10 @@ if __name__ == '__main__':
     download.download_file(URL_CSIQ, './data/ECSIQ.zip', unzip=True)
 
     # Train and test model
-    model = 'inception_v3'
+    model = 'resnet_152'
     wandb_enable = True
-    # best = train_model(backbone=model, data_dir='./data/ECSIQ/', num_epochs=20, batch_size=24, lr=0.0001, wandb_enable=wandb_enable)
-    test_model(weight_path='/home/jmn/Dev/python/distortions/runs/train/20251203-083051/best_distortion_2.pth', name_model=model, folder_path='./data/LIVE/', wandb_enable=wandb_enable)
+    batch = 8
+    best = train_model(backbone=model, data_dir='./data/ECSIQv3/', num_epochs=16, batch_size=batch, lr=0.0001, wandb_enable=wandb_enable)
+    test_model(weight_path=best, name_model=model, folder_path='./data/LIVE_rotation/', wandb_enable=wandb_enable, batch_size=batch)
 
 

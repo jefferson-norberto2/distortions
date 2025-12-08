@@ -7,8 +7,8 @@ def rotate_and_crop(file_name, input_folder, output_folder):
     width, height = img.size
 
     # Verifica se a imagem é 512x512
-    if width != 512 or height != 512:
-        raise ValueError(f"A imagem {file_name} deve ter 512x512 pixels")
+    # if width != 512 or height != 512:
+    #     raise ValueError(f"A imagem {file_name} deve ter 512x512 pixels")
 
     # Cria pasta de saída, se não existir
     os.makedirs(output_folder, exist_ok=True)
@@ -20,12 +20,13 @@ def rotate_and_crop(file_name, input_folder, output_folder):
         # Rotaciona a imagem (expand=True evita corte nas bordas)
         rotated = img.rotate(angle, resample=Image.BICUBIC, expand=True)
 
-        # Calcula recorte central 256x256
+        # Calcula recorte central 299x299
+        wr, hr = 299, 299
         rw, rh = rotated.size
-        left = (rw - 256) // 2
-        top = (rh - 256) // 2
-        right = left + 256
-        bottom = top + 256
+        left = (rw - wr) // 2
+        top = (rh - hr) // 2
+        right = left + wr
+        bottom = top + hr
         cropped = rotated.crop((left, top, right, bottom))
 
         # Gera o nome do arquivo de saída
@@ -62,4 +63,4 @@ def rotate_images_in_directory(root_directory: str) -> None:
                         print(f"Erro ao processar {file_name}: {e}")
 
 if __name__ == "__main__":
-    rotate_images_in_directory('/home/jmn/host/dev/Datasets/IQA/ECSIQ/')
+    rotate_images_in_directory('/home/jmn/Dev/python/distortions/data/LIVE/')

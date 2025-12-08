@@ -70,4 +70,4 @@ def flip_images_in_directory(directory: str = '/home/jmn/host/dev/Datasets/IQA/E
                             fliped_image.save(fliped_path)
             
 if __name__ == "__main__":
-    flip_images_in_directory('/home/jmn/host/dev/Datasets/IQA/ECSIQ_rotation/', types=['vertical'])
+    flip_images_in_directory('/home/jmn/Dev/python/distortions/data/ECSIQv3', types=['vertical', 'horizontal'])

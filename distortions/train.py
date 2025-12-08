@@ -35,7 +35,7 @@ def main(model, backbone, dataset_name, train_loader, val_loader, device, num_ep
     )
 
     time_stamp = time.strftime("%Y%m%d-%H%M%S")
-    save_dir = f"runs/train/{time_stamp}"
+    save_dir = f"runs/train/{backbone}_{time_stamp}"
     os.makedirs(save_dir, exist_ok=True)
 
     with open(f"{save_dir}/config.yaml", "w") as file:

@@ -64,43 +64,42 @@ def gerar_ruido_rosa_2d(height, width, beta=2):
     
     return ruido_normalizado
 
-# --- Exemplo de Uso ---
 
-IMG_SIZE = 512
+if __name__ == "__main__":
+    root_path = '/home/jmn/Dev/python/distortions/data/LIVE/fnoise'
 
-noise_r = gerar_ruido_rosa_2d(IMG_SIZE, IMG_SIZE, beta=2)
-noise_g = gerar_ruido_rosa_2d(IMG_SIZE, IMG_SIZE, beta=2)
-noise_b = gerar_ruido_rosa_2d(IMG_SIZE, IMG_SIZE, beta=2)
+    list_files = os.listdir(root_path)
 
-# Empilha os canais de ruído
-pink_noise_rgb = np.stack([noise_r, noise_g, noise_b], axis=-1)
+    for file_name in list_files:
+        if file_name.endswith('.png') or file_name.endswith('.jpg') or file_name.endswith('.bmp'):
+            image_path = os.path.join(root_path, file_name)
+            print(f"Processando imagem: {image_path}")
 
-root_path = '/home/jmn/dev/Datasets/IQA/LIVE/fnoise'
+            # 1. Carregar a imagem RGB
+            img = Image.open(image_path).convert("RGB")
+            img_array = np.array(img, dtype=np.float32)
 
-list_files = os.listdir(root_path)
+            # Pegar dimensões da imagem
+            height, width, channels = img_array.shape
 
-for file_name in list_files:
-    if file_name.endswith('.png') or file_name.endswith('.jpg') or file_name.endswith('.bmp'):
-        image_path = os.path.join(root_path, file_name)
-        print(f"Processando imagem: {image_path}")
+            # Gerar ruído rosa 2D para cada canal
+            noise_r = gerar_ruido_rosa_2d(height, width, beta=2)
+            noise_g = gerar_ruido_rosa_2d(height, width, beta=2)
+            noise_b = gerar_ruido_rosa_2d(height, width, beta=2)
 
-        # 1. Carregar a imagem RGB
-        img = Image.open(image_path).convert("RGB")
-        img_array = np.array(img, dtype=np.float32)
+            # Empilha os canais de ruído
+            pink_noise_rgb = np.stack([noise_r, noise_g, noise_b], axis=-1)
 
-        # resize se necessário
-        img_array = np.array(img.resize((IMG_SIZE, IMG_SIZE)), dtype=np.float32)
+            # 2. Normalizar a imagem para [0, 1]
+            img_normalized = img_array / 255.0
 
-        # 2. Normalizar a imagem para [0, 1]
-        img_normalized = img_array / 255.0
+            # 3. Adicionar o ruído rosa (ajustar a intensidade conforme necessário)
+            intensity = np.random.uniform(0.1, 0.3)  # Intensidade aleatória entre 0.1 e 0.3
+            noisy_img = img_normalized + intensity * pink_noise_rgb
+            noisy_img = np.clip(noisy_img, 0, 1)  # Garantir que os valores estejam em [0, 1]
 
-        # 3. Adicionar o ruído rosa (ajustar a intensidade conforme necessário)
-        intensity = 0.3  # Ajuste a intensidade do ruído
-        noisy_img = img_normalized + intensity * pink_noise_rgb
-        noisy_img = np.clip(noisy_img, 0, 1)  # Garantir que os valores estejam em [0, 1]
-
-        # 4. Converter de volta para imagem e salvar/mostrar
-        noisy_img_uint8 = (noisy_img * 255).astype(np.uint8)
-        noisy_image = Image.fromarray(noisy_img_uint8)
-        noisy_image.save(image_path)
+            # 4. Converter de volta para imagem e salva
+            noisy_img_uint8 = (noisy_img * 255).astype(np.uint8)
+            noisy_image = Image.fromarray(noisy_img_uint8)
+            noisy_image.save(image_path)
 
