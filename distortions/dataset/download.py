@@ -12,7 +12,7 @@ def download_file(url: str, output_path: str, unzip: bool) -> None:
     """
 
     # Create the output directory if it doesn't exist
-    if not os.path.exists(os.path.dirname(output_path)):
+    if not os.path.exists(output_path):
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
         
         # Download the file

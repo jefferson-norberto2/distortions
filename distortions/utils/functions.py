@@ -5,22 +5,24 @@ from tqdm import tqdm
 from sklearn.metrics import precision_score, recall_score, accuracy_score
 from typing import Tuple
 
-def get_backbone_and_weights(name_model='resnet_50') -> Tuple:
-    if name_model == 'resnet_18':
+from distortions.model.custom_resnet import ModelArchitecture
+
+def get_backbone_and_weights(name_model=ModelArchitecture.RESNET_50) -> Tuple:
+    if name_model == ModelArchitecture.RESNET_18:
         back = models.resnet18
         weights = models.ResNet18_Weights.IMAGENET1K_V1
-    if name_model == 'resnet_34':
+    if name_model == ModelArchitecture.RESNET_34:
         back = models.resnet34
         weights = models.ResNet34_Weights.IMAGENET1K_V1
-    elif name_model == 'resnet_50':
+    elif name_model == ModelArchitecture.RESNET_50:
         back = models.resnet50
-    elif name_model == 'resnet_101':
+    elif name_model == ModelArchitecture.RESNET_101:
         back = models.resnet101
         weights = models.ResNet101_Weights.IMAGENET1K_V2
-    elif name_model == 'resnet_152':
+    elif name_model == ModelArchitecture.RESNET_152:
         back = models.resnet152
         weights = models.ResNet152_Weights.IMAGENET1K_V2
-    elif name_model == 'inception_v3':
+    elif name_model == ModelArchitecture.INCEPTION_V3:
         back = models.inception_v3
         weights = models.Inception_V3_Weights.IMAGENET1K_V1
     else:

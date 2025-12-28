@@ -5,9 +5,10 @@ import wandb
 import time
 import os
 
-from distortions.model.custom_resnet import CustomResNet, CustomInception
+from distortions.model.custom_resnet import CustomResNet, CustomInception, ModelArchitecture
 from distortions.utils.functions import get_backbone_and_weights, train_epoch, validate_epoch
 from distortions.dataset.dataloaders import get_dataloaders  
+
 
 def main(model, backbone, dataset_name, train_loader, val_loader, device, num_epochs, lr, wandb_enable) -> str:
     best_acc = 0.0
@@ -77,7 +78,7 @@ def main(model, backbone, dataset_name, train_loader, val_loader, device, num_ep
 
 
 def train_model(
-    backbone='resnet_50',
+    backbone=ModelArchitecture.RESNET_50,
     data_dir="/home/jmn/host/dev/Datasets/IQA/ECSIQ/",
     train_split=0.7,
     batch_size=32,
@@ -95,7 +96,7 @@ def train_model(
 
     back, weights = get_backbone_and_weights(name_model=backbone)
 
-    if backbone.lower() == "inception_v3":
+    if backbone == ModelArchitecture.INCEPTION_V3:
         model = CustomInception(
             num_classes=7,
             backbone=back,

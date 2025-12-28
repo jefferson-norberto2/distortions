@@ -1,5 +1,13 @@
-from torchvision import models
+from enum import Enum
 from torch.nn import Module, Linear
+
+class ModelArchitecture(Enum):
+    RESNET_18 = "resnet_18"
+    RESNET_34 = "resnet_34"
+    RESNET_50 = "resnet_50"
+    RESNET_101 = "resnet_101"
+    RESNET_152 = "resnet_152"
+    INCEPTION_V3 = "inception_v3"
 
 class CustomResNet(Module):
     def __init__(self, 
