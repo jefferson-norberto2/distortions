@@ -1,5 +1,4 @@
 
-from distortions.model.custom_resnet import ModelArchitecture
 from distortions.test import test_model
 from distortions.train import train_model
 from distortions.dataset import download
@@ -13,11 +12,20 @@ if __name__ == '__main__':
     # download.download_file(URL_LIVE, './data/LIVE.zip', unzip=True)
     # download.download_file(URL_CSIQ, './data/ECSIQ.zip', unzip=True)
 
-    backbone_choice = 'custom_noise_net'
+    backbone_choice = 'Noise_net'
     best_model_path = train_model(
         backbone=backbone_choice, 
         data_dir='/home/jmn/dev/python/distortions/data/CSIQ_Noise_v2/',
-        num_epochs=20, 
+        num_epochs=10, 
+        lr=0.0001,
+        batch_size=16,
+        wandb_enable=True
+    )
+
+    test_model(
+        model_path=best_model_path,
+        backbone=backbone_choice,
+        data_dir='/home/jmn/dev/python/distortions/data/LIVE/',
         batch_size=16,
         wandb_enable=True
     )

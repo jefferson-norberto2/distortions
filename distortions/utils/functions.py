@@ -4,8 +4,23 @@ from torchvision import models
 from tqdm import tqdm
 from sklearn.metrics import precision_score, recall_score, accuracy_score
 from typing import Tuple
+import os
 
 from distortions.model.custom_resnet import ModelArchitecture
+
+def mkdir_savel_folder(root_path: str, backbone_name: str) -> str:
+    # List all folders in the root_path that match the backbone_name pattern
+    os.makedirs(root_path, exist_ok=True)
+    
+    all_folders = os.listdir(root_path)
+
+    # count existing runs for the given backbone_name
+    run_count = sum(1 for folder in all_folders if folder.startswith(backbone_name))
+    new_folder_name = f"{root_path}/{backbone_name}_{run_count + 1}"
+
+    os.makedirs(new_folder_name, exist_ok=True)
+    
+    return new_folder_name
 
 def get_backbone_and_weights(name_model=ModelArchitecture.RESNET_50) -> Tuple:
     if name_model == ModelArchitecture.RESNET_18:

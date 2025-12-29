@@ -1,51 +1,35 @@
 import matplotlib.pyplot as plt
 import torch
 import wandb 
-import time
-import os
+import numpy as np
 
-from torchvision import datasets, transforms
-from torch.utils.data import DataLoader
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
-from distortions.model.custom_resnet import CustomResNet, CustomInception
-from distortions.utils.functions import get_backbone_and_weights, validate_epoch  # se quiser manter o uso atual
+from distortions.utils.functions import validate_epoch, mkdir_savel_folder
+from distortions.model.noise_model import NoiseClassificationNet
+from distortions.dataset.dataloader2 import get_test_data_loader
 
-def test_model(folder_path="/home/jmn/host/dev/Datasets/IQA/ELIVE/",
-               weight_path="distortions_10_resnet50_b16_lr1e-4.pth", 
-               name_model="resnet50", wandb_enable=False, batch_size=24
-               ):
+def test_model(data_dir: str, model_path: str, backbone: str, wandb_enable: bool, batch_size: int):
+    # --- Salvamento da matriz de confusão ---
+    save_dir = mkdir_savel_folder("runs/test", backbone)
     
     # --- Inicializa o W&B ---
-    wandb.init(project="distortions-detect", name=f"evaluation_{name_model}", mode="online" if wandb_enable else "disabled")
+    wandb.init(project="distortions-detect", name=f"evaluation_{backbone}", mode="online" if wandb_enable else "disabled")
     
-    # --- Transformação das imagens ---
-    transform = transforms.Compose([
-        #transforms.CenterCrop(299),
-        transforms.ToTensor(),
-    ])
-
-    # --- Dataset e DataLoader ---
-    dataset = datasets.ImageFolder(root=folder_path, transform=transform)
-    val_loader = DataLoader(dataset, batch_size=batch_size, shuffle=False)
-    class_names = dataset.classes  # nomes das classes
+   # --- Carrega os dados de validação ---
+    loader = get_test_data_loader(data_dir, batch_size=batch_size, input_size=299)
 
     # --- Dispositivo ---
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    # --- Modelo ---
-    backbone, weights = get_backbone_and_weights(name_model=name_model)
-    
-    if name_model == 'inception_v3':
-        model = CustomInception(num_classes=7, backbone=backbone, weights=weights, training=False)
-    else:
-        model = CustomResNet(num_classes=7, backbone=backbone, weights=weights)
-    model.load_state_dict(torch.load(weight_path, map_location=device))
+    # --- Modelo -- 
+    model = NoiseClassificationNet(num_classes=len(loader.class_names))
+    model.load_state_dict(torch.load(model_path, map_location=device))
     model = model.to(device)
     model.eval()
 
     # --- Avaliação ---
     criterion = torch.nn.CrossEntropyLoss()
-    val_loss, val_acc, precision, recall = validate_epoch(model, val_loader, criterion, device)
+    val_loss, val_acc, precision, recall = validate_epoch(model, loader.dataloader, criterion, device)
     print(f"| Val Loss: {val_loss:.4f}, Val Acc: {val_acc:.2f}%, Precision: {precision:.4f}, Recall: {recall:.4f} |")
     wandb.log({"val_loss": val_loss, "val_acc": val_acc, "val_precision": precision, "val_recall": recall})
 
@@ -54,29 +38,48 @@ def test_model(folder_path="/home/jmn/host/dev/Datasets/IQA/ELIVE/",
     all_labels = []
 
     with torch.no_grad():
-        for imgs, labels in val_loader:
+        for imgs, labels in loader.dataloader:
             imgs, labels = imgs.to(device), labels.to(device)
             outputs = model(imgs)
             _, preds = torch.max(outputs, 1)
             all_preds.extend(preds.cpu().numpy())
             all_labels.extend(labels.cpu().numpy())
 
-    # --- Cria a matriz de confusão ---
-    cm = confusion_matrix(all_labels, all_preds)
-    disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=class_names)
+            for i, pred in enumerate(preds):
+                pred_label = pred.item()
+                true_label = labels[i].item()
 
-    time_stamp = time.strftime("%Y%m%d-%H%M%S")
-    save_dir = f"runs/test/{time_stamp}"
-    os.makedirs(save_dir, exist_ok=True)
+                if pred_label != true_label:
+                    img = imgs[i].cpu().numpy().transpose(1, 2, 0)
+
+                    # opcional: desnormalizar aqui
+                    mean = np.array([0.485, 0.456, 0.406])
+                    std  = np.array([0.229, 0.224, 0.225])
+
+                    img = imgs[i].cpu().numpy().transpose(1, 2, 0)
+                    img = img * std + mean          # desnormaliza
+                    img = np.clip(img, 0, 1)        # garante faixa válida
+
+                    plt.imsave(
+                        f"{save_dir}/misclassified_{backbone}_pred_{pred_label}_true_{true_label}.png",
+                        img
+                    )
+
+
+
+    # --- Matriz de confusão ---
+    cm = confusion_matrix(all_labels, all_preds)
+    disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=loader.class_names)
+
 
     # --- Visualização ---
-    fig, ax = plt.subplots(figsize=(8, 8))
+    _, ax = plt.subplots(figsize=(8, 8))
     disp.plot(ax=ax, cmap='Blues', values_format='d', colorbar=False)
-    plt.title(f"Matriz de Confusão - {name_model}")
+    plt.title(f"Matriz de Confusão - {backbone}")
     plt.xticks(rotation=45)
     plt.tight_layout()
-    plt.savefig(f"{save_dir}/confusion_matrix_{name_model}.png", dpi=300)
-    wandb.log({f"confusion_matrix_{name_model}": wandb.Image(f"{save_dir}/confusion_matrix_{name_model}.png")})
+    plt.savefig(f"{save_dir}/confusion_matrix_{backbone}.png", dpi=300)
+    wandb.log({f"confusion_matrix_{backbone}": wandb.Image(f"{save_dir}/confusion_matrix_{backbone}.png")})
 
 if __name__ == '__main__':
     test_model()
