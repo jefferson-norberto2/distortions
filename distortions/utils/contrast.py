@@ -1,124 +1,67 @@
 import os
 import random
-import sys
-from PIL import Image, ImageEnhance, UnidentifiedImageError
+from PIL import Image, ImageEnhance
+from tqdm import tqdm
 
-# Define as extensões de imagem permitidas
-ALLOWED_EXTENSIONS = {'.bmp', '.jpg', '.jpeg', '.png'}
 
-def get_float_input(prompt):
-    """Pede ao usuário um número float e valida a entrada."""
-    while True:
-        try:
-            value = float(input(prompt))
-            return value
-        except ValueError:
-            print("Entrada inválida. Por favor, insira um número (ex: 0.8).")
+def aplicar_low_light_global(
+    img,
+    bright_range=(0.5, 0.9),
+    contrast_range=(0.6, 0.95)
+):
+    bright_factor = random.uniform(*bright_range)
+    contrast_factor = random.uniform(*contrast_range)
 
-def process_directory(directory, bright_range, contrast_range):
-    """
-    Processa todos os arquivos no diretório.
-    Remove arquivos não-imagem e ajusta imagens válidas.
-    """
-    print(f"\nIniciando processamento no diretório: {directory}")
-    
-    # Desempacota os ranges
-    min_bright, max_bright = bright_range
-    min_contrast, max_contrast = contrast_range
+    img = ImageEnhance.Brightness(img).enhance(bright_factor)
+    img = ImageEnhance.Contrast(img).enhance(contrast_factor)
 
-    if not os.path.isdir(directory):
-        print(f"Erro: O diretório '{directory}' não foi encontrado.")
-        return
+    label = {
+        "brightness": bright_factor,
+        "contrast": contrast_factor
+    }
 
-    # Lista todos os itens no diretório
-    for filename in os.listdir(directory):
-        file_path = os.path.join(directory, filename)
+    return img, label
 
-        # Ignora se for um subdiretório
-        if not os.path.isfile(file_path):
-            print(f"Ignorando (é um diretório): {filename}")
-            continue
 
-        # Pega a extensão do arquivo em minúsculas
-        _, ext = os.path.splitext(filename)
-        ext_lower = ext.lower()
+def processar_dataset(
+    input_dir,
+    output_dir,
+    bright_range=(0.5, 0.9),
+    contrast_range=(0.6, 0.95)
+):
+    os.makedirs(output_dir, exist_ok=True)
 
-        if ext_lower in ALLOWED_EXTENSIONS:
-            # --- É UMA IMAGEM: PROCESSAR ---
-            try:
-                # Abre a imagem
-                with Image.open(file_path) as img:
-                    
-                    # 1. Gera fatores aleatórios
-                    bright_factor = random.uniform(min_bright, max_bright)
-                    contrast_factor = random.uniform(min_contrast, max_contrast)
+    files = [
+        f for f in os.listdir(input_dir)
+        if f.lower().endswith((".png", ".jpg", ".jpeg", ".bmp"))
+    ]
 
-                    # 2. Aplica brilho
-                    enhancer_brightness = ImageEnhance.Brightness(img)
-                    img_adjusted = enhancer_brightness.enhance(bright_factor)
+    labels = []
 
-                    # 3. Aplica contraste
-                    enhancer_contrast = ImageEnhance.Contrast(img_adjusted)
-                    img_final = enhancer_contrast.enhance(contrast_factor)
-                    
-                    # 4. Salva a imagem (sobrescreve a original)
-                    img_final.save(file_path)
+    for fname in tqdm(files, desc="Low-light (global)"):
+        img = Image.open(os.path.join(input_dir, fname)).convert("RGB")
 
-                    print(f"Processado: {filename} (Brilho: {bright_factor:.2f}, Contraste: {contrast_factor:.2f})")
+        img_out, label = aplicar_low_light_global(
+            img, bright_range, contrast_range
+        )
 
-            except UnidentifiedImageError:
-                print(f"Erro: Não foi possível identificar a imagem: {filename}. Pode estar corrompida.")
-            except Exception as e:
-                print(f"Erro ao processar {filename}: {e}")
-        
-        else:
-            # --- NÃO É UMA IMAGEM: REMOVER ---
-            try:
-                os.remove(file_path)
-                print(f"Removido (não é imagem): {filename}")
-            except PermissionError:
-                print(f"Erro de permissão: Não foi possível remover {filename}.")
-            except Exception as e:
-                print(f"Erro ao remover {filename}: {e}")
+        img_out.save(
+            os.path.join(output_dir, fname),
+            quality=100,
+            subsampling=0
+        )
 
-def main():
-    print("--- Modificador Aleatório de Brilho e Contraste ---")
-    print("\nAVISO: Este script MODIFICA PERMANENTEMENTE as imagens originais")
-    print("e REMOVE PERMANENTEMENTE arquivos que não são imagens válidas")
-    print(f"(permitidos: {', '.join(ALLOWED_EXTENSIONS)}) no diretório de destino.")
-    print("\n*** FAÇA UM BACKUP ANTES DE CONTINUAR! ***\n")
+        labels.append((fname, label["brightness"], label["contrast"]))
 
-    # 1. Obter o diretório
-    directory_path = input("Insira o caminho completo para o diretório: ").strip()
+    with open(os.path.join(output_dir, "labels_low_light.txt"), "w") as f:
+        for name, b, c in labels:
+            f.write(f"{name},{b:.4f},{c:.4f}\n")
 
-    # 2. Obter os ranges
-    print("\nInsira os ranges para os fatores de ajuste:")
-    print("(1.0 = original, 0.7 = 70% de redução, 1.2 = 20% de aumento)")
-    
-    min_bright = get_float_input("Brilho MÍNIMO (ex: 0.6): ")
-    max_bright = get_float_input("Brilho MÁXIMO (ex: 0.9): ")
-    min_contrast = get_float_input("Contraste MÍNIMO (ex: 0.7): ")
-    max_contrast = get_float_input("Contraste MÁXIMO (ex: 1.0): ")
-
-    # Validação simples dos ranges
-    if min_bright > max_bright or min_contrast > max_contrast:
-        print("\nErro: O valor MÍNIMO não pode ser maior que o valor MÁXIMO.")
-        sys.exit(1) # Encerra o script
-
-    # 3. Confirmação final
-    print("\nResumo da operação:")
-    print(f"Diretório: {directory_path}")
-    print(f"Range Brilho: [{min_bright}, {max_bright}]")
-    print(f"Range Contraste: [{min_contrast}, {max_contrast}]")
-    print("Arquivos não-imagem SERÃO REMOVIDOS.")
-    
-    confirm = input("\nVocê tem certeza que deseja continuar? (s/n): ").strip().lower()
-
-    if confirm == 's':
-        process_directory(directory_path, (min_bright, max_bright), (min_contrast, max_contrast))
-        print("\nProcessamento concluído.")
-    else:
-        print("Operação cancelada.")
 
 if __name__ == "__main__":
-    main()
+    processar_dataset(
+        input_dir="/mnt/e/Datasets/NOISE_Aug/train/src",
+        output_dir="/mnt/e/Datasets/NOISE_Aug/train/low_light",
+        bright_range=(0.55, 0.85),
+        contrast_range=(0.65, 0.9)
+    )

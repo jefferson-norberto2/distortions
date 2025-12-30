@@ -1,76 +1,32 @@
-import torch
-import numpy as np
-from torchvision import models
 from tqdm import tqdm
 from sklearn.metrics import precision_score, recall_score, accuracy_score
-from typing import Tuple
-import os
-
-from distortions.model.custom_resnet import ModelArchitecture
+from torch import no_grad
+from os import listdir, makedirs
 
 def mkdir_savel_folder(root_path: str, backbone_name: str) -> str:
     # List all folders in the root_path that match the backbone_name pattern
-    os.makedirs(root_path, exist_ok=True)
+    makedirs(root_path, exist_ok=True)
     
-    all_folders = os.listdir(root_path)
+    all_folders = listdir(root_path)
 
     # count existing runs for the given backbone_name
     run_count = sum(1 for folder in all_folders if folder.startswith(backbone_name))
     new_folder_name = f"{root_path}/{backbone_name}_{run_count + 1}"
 
-    os.makedirs(new_folder_name, exist_ok=True)
+    makedirs(new_folder_name, exist_ok=True)
     
     return new_folder_name
-
-def get_backbone_and_weights(name_model=ModelArchitecture.RESNET_50) -> Tuple:
-    if name_model == ModelArchitecture.RESNET_18:
-        back = models.resnet18
-        weights = models.ResNet18_Weights.IMAGENET1K_V1
-    if name_model == ModelArchitecture.RESNET_34:
-        back = models.resnet34
-        weights = models.ResNet34_Weights.IMAGENET1K_V1
-    elif name_model == ModelArchitecture.RESNET_50:
-        back = models.resnet50
-    elif name_model == ModelArchitecture.RESNET_101:
-        back = models.resnet101
-        weights = models.ResNet101_Weights.IMAGENET1K_V2
-    elif name_model == ModelArchitecture.RESNET_152:
-        back = models.resnet152
-        weights = models.ResNet152_Weights.IMAGENET1K_V2
-    elif name_model == ModelArchitecture.INCEPTION_V3:
-        back = models.inception_v3
-        weights = models.Inception_V3_Weights.IMAGENET1K_V1
-    else:
-        raise ValueError(f"Model error: {name_model}, choose: 'resnet_18', 'resnet_34', 'resnet_50', 'resnet_101', 'resnet_152', 'inception_v3'.")
-    return back, weights
-
-def class_distribution(dataset, train_dataset, val_dataset):
-    # classes do dataset
-    class_names = dataset.classes
-
-    # inicializa contadores
-    train_counts = np.zeros(len(class_names), dtype=int)
-    val_counts   = np.zeros(len(class_names), dtype=int)
-
-    # contar exemplos no train_dataset
-    for idx in train_dataset.indices:
-        label = dataset[idx][1]  # índice da classe
-        train_counts[label] += 1
-
-    # contar exemplos no val_dataset
-    for idx in val_dataset.indices:
-        label = dataset[idx][1]
-        val_counts[label] += 1
-
-    # imprimir resultados
-    print("Distribuição por classe:\n")
-    for i, cls in enumerate(class_names):
-        print(f"{cls:15s} | Treino: {train_counts[i]} | Validação: {val_counts[i]} | Total: {train_counts[i] + val_counts[i]}")
 
 
 def train_epoch(model, train_loader, criterion, optimizer, device):
     model.train()
-    running_loss, total = 0.0, 0
+    
+    # Acumuladores básicos (RÁPIDOS)
+    running_loss = 0.0
+    correct_predictions = 0
+    total_samples = 0
+    
+    # Listas para métricas completas (usadas só no final)
     all_preds, all_labels = [], []
 
     progress_bar = tqdm(train_loader, desc="Treinando", leave=False, dynamic_ncols=True)
@@ -79,77 +35,100 @@ def train_epoch(model, train_loader, criterion, optimizer, device):
         images, labels = images.to(device), labels.to(device)
 
         optimizer.zero_grad()
-
+        
+        # Forward Pass
         outputs = model(images)
 
-        # Caso o modelo retorne duas saídas (Inception)
-        if isinstance(outputs, tuple) or isinstance(outputs, list):
+        # Lógica para Inception (Tuplas) vs Modelos Padrão
+        # Nota: Sua NoiseClassificationNet retorna tensor único, então cairá no 'else'
+        if isinstance(outputs, (tuple, list)):
             logits, aux_logits = outputs
             loss_main = criterion(logits, labels)
             loss_aux = criterion(aux_logits, labels) * 0.4
             loss = loss_main + loss_aux
             preds_for_metrics = logits
         else:
-            # ResNet, MobileNet, EfficientNet, etc
             loss = criterion(outputs, labels)
             preds_for_metrics = outputs
 
+        # Backward Pass
         loss.backward()
         optimizer.step()
 
-        running_loss += loss.item() * images.size(0)
-
+        # --- Métricas "On-the-fly" (CPU Leve) ---
+        batch_size = images.size(0)
+        running_loss += loss.item() * batch_size
+        
         _, predicted = preds_for_metrics.max(1)
-        total += labels.size(0)
+        correct_predictions += predicted.eq(labels).sum().item()
+        total_samples += batch_size
 
+        # Guardar para o final (sem calcular sklearn aqui)
         all_preds.extend(predicted.cpu().numpy())
         all_labels.extend(labels.cpu().numpy())
 
-        current_loss = running_loss / total
-        current_acc = accuracy_score(all_labels, all_preds) * 100
-        precision = precision_score(all_labels, all_preds, average="macro", zero_division=0) * 100
-        recall = recall_score(all_labels, all_preds, average="macro", zero_division=0) * 100
+        # Atualizar barra de progresso com cálculo aritmético simples (O(1))
+        current_loss = running_loss / total_samples
+        current_acc = (correct_predictions / total_samples) * 100
+        
+        progress_bar.set_postfix(loss=f"{current_loss:.4f}", acc=f"{current_acc:.2f}%")
 
-        progress_bar.set_postfix(loss=f"{current_loss:.4f}", acc=f"{current_acc:.2f}%",
-                                 precision=f"{precision:.2f}%", recall=f"{recall:.2f}%")
+    # --- Cálculo Pesado (Fora do Loop - Executa 1x por época) ---
+    # Agora sim usamos o Scikit-Learn
+    epoch_loss = running_loss / len(train_loader.dataset)
+    epoch_acc = accuracy_score(all_labels, all_preds) * 100
+    precision = precision_score(all_labels, all_preds, average="macro", zero_division=0) * 100
+    recall = recall_score(all_labels, all_preds, average="macro", zero_division=0) * 100
 
-    train_loss = running_loss / len(train_loader.dataset)
-
-    return train_loss, current_acc, precision, recall
-
+    return epoch_loss, epoch_acc, precision, recall
 
 def validate_epoch(model, val_loader, criterion, device):
     model.eval()
-    running_loss, total = 0.0, 0
+    
+    # Acumuladores básicos (RÁPIDOS)
+    running_loss = 0.0
+    correct_predictions = 0
+    total_samples = 0
+    
+    # Listas para métricas completas (usadas só no final)
     all_preds, all_labels = [], []
 
-    with torch.no_grad():
+    with no_grad():
         progress_bar = tqdm(val_loader, desc="Validando", leave=False, dynamic_ncols=True)
+        
         for images, labels in progress_bar:
             images, labels = images.to(device), labels.to(device)
-           
+            
+            # Forward pass
             outputs = model(images)
-           
-            if isinstance(model, models.Inception3):
-                outputs = outputs[0]  # só logits
-
+            
+            # Nota: Inception3 em modo .eval() retorna tensor único, 
+            # não precisa da lógica de [0] ou tupla aqui.
+            
             loss = criterion(outputs, labels)
 
-            running_loss += loss.item() * images.size(0)
+            # Acumuladores de Loss e Acurácia Simples
+            batch_size = images.size(0)
+            running_loss += loss.item() * batch_size
+            
             _, predicted = outputs.max(1)
-            total += labels.size(0)
+            correct_predictions += predicted.eq(labels).sum().item()
+            total_samples += batch_size
 
-            # Armazena para métricas
+            # Armazena para métricas finais
             all_preds.extend(predicted.cpu().numpy())
             all_labels.extend(labels.cpu().numpy())
 
-            current_loss = running_loss / total
-            current_acc = accuracy_score(all_labels, all_preds) * 100
-            precision = precision_score(all_labels, all_preds, average="macro", zero_division=0) * 100
-            recall = recall_score(all_labels, all_preds, average="macro", zero_division=0) * 100
-            progress_bar.set_postfix(loss=f"{current_loss:.4f}", acc=f"{current_acc:.2f}%", precision=f"{precision:.2f}%", recall=f"{recall:.2f}%")
+            # Atualiza barra com cálculo aritmético O(1)
+            current_loss = running_loss / total_samples
+            current_acc = (correct_predictions / total_samples) * 100
+            
+            progress_bar.set_postfix(loss=f"{current_loss:.4f}", acc=f"{current_acc:.2f}%")
 
+    # --- Cálculo Pesado (Fora do Loop - Executa 1x por época) ---
     val_loss = running_loss / len(val_loader.dataset)
-    
+    val_acc = accuracy_score(all_labels, all_preds) * 100
+    precision = precision_score(all_labels, all_preds, average="macro", zero_division=0) * 100
+    recall = recall_score(all_labels, all_preds, average="macro", zero_division=0) * 100
 
-    return val_loss, current_acc, precision, recall
+    return val_loss, val_acc, precision, recall

@@ -6,26 +6,33 @@ import numpy as np
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 from distortions.utils.functions import validate_epoch, mkdir_savel_folder
 from distortions.model.noise_model import NoiseClassificationNet
+from distortions.model.custom_resnet import ModelArchitecture, CustomInception, CustomResNet
 from distortions.dataset.dataloader2 import get_test_data_loader
 
-def test_model(data_dir: str, model_path: str, backbone: str, wandb_enable: bool, batch_size: int):
+def test_model(data_dir: str, model_path: str, backbone: ModelArchitecture, wandb_enable: bool, batch_size: int):
     # --- Salvamento da matriz de confusão ---
-    save_dir = mkdir_savel_folder("runs/test", backbone)
+    save_dir = mkdir_savel_folder("runs/test", backbone.value)
     
     # --- Inicializa o W&B ---
-    wandb.init(project="distortions-detect", name=f"evaluation_{backbone}", mode="online" if wandb_enable else "disabled")
+    wandb.init(project="distortions-detect", name=f"evaluation_{backbone.value}", mode="online" if wandb_enable else "disabled")
     
    # --- Carrega os dados de validação ---
-    loader = get_test_data_loader(data_dir, batch_size=batch_size, input_size=299)
+    input_size = 299 if backbone == ModelArchitecture.INCEPTION_V3 else 224
+    loader = get_test_data_loader(data_dir, batch_size=batch_size, input_size=input_size)
 
     # --- Dispositivo ---
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # --- Modelo -- 
-    model = NoiseClassificationNet(num_classes=len(loader.class_names))
+    if backbone == ModelArchitecture.NOISE_NET:
+        model = NoiseClassificationNet(num_classes=len(loader.class_names))
+    elif backbone == ModelArchitecture.INCEPTION_V3:
+        model = CustomInception(num_classes=len(loader.class_names), pre_trained=False, training=False)
+    else:
+        model = CustomResNet(num_classes=len(loader.class_names), backbone=backbone, pretrained=False)
+        
     model.load_state_dict(torch.load(model_path, map_location=device))
     model = model.to(device)
-    model.eval()
 
     # --- Avaliação ---
     criterion = torch.nn.CrossEntropyLoss()

@@ -1,105 +1,137 @@
-import numpy as np
-import matplotlib.pyplot as plt
-from PIL import Image
-# importar biblioteca para listar imagens na pasta
 import os
+import numpy as np
+from PIL import Image
+from tqdm import tqdm
 
-def gerar_ruido_rosa_2d(height, width, beta=2):
-    """
-    Gera ruído rosa 2D (para imagens) usando FFT.
 
-    Args:
-        height (int): Altura da imagem.
-        width (int): Largura da imagem.
-        beta (int): O expoente da lei de potência (Potência ~ 1/f^beta).
-                    beta = 0 é ruído branco.
-                    beta = 1 é "pink noise" 1D (em 2D fica "fraco").
-                    beta = 2 é "pink noise" 2D (também chamado de "brown noise" 1D).
-                    Este é o valor mais comum para texturas naturais.
-
-    Returns:
-        numpy.ndarray: Uma matriz 2D com o ruído, normalizada entre 0 e 1.
-    """
-    
-    # 1. Criar um grid de frequências
-    # Calcula as frequências para cada eixo
+# =========================================================
+# Pink Noise 2D
+# =========================================================
+def gerar_ruido_rosa_2d(height, width, beta=2.0):
     freq_x = np.fft.fftfreq(width)
     freq_y = np.fft.fftfreq(height)
-    
-    # Cria um grid 2D com essas frequências
     fxx, fyy = np.meshgrid(freq_x, freq_y)
-    
-    # 2. Calcular a magnitude da frequência (distância do centro)
-    # f = sqrt(fx^2 + fy^2)
-    f_squared = fxx**2 + fyy**2
-    
-    # 3. Criar o filtro de amplitude (Amplitude ~ 1 / f^(beta/2))
-    # Lidando com a divisão por zero no componente DC (f=0)
-    # Definimos f[0,0] = 1.0 para evitar o erro, sua amplitude será 1.
-    f_squared[0, 0] = 1.0
-    
-    # A Potência(f) ~ 1/f^beta
-    # A Amplitude(f) ~ sqrt(Potência) ~ 1/f^(beta/2)
-    amplitude_filtro = 1.0 / (f_squared ** (beta / 4.0)) # (f^2)^(beta/4) = f^(beta/2)
-    
-    # 4. Gerar ruído branco no domínio da frequência
-    # Fases aleatórias (números complexos aleatórios)
-    fase_real = np.random.normal(0, 1, (height, width))
-    fase_imaginaria = np.random.normal(0, 1, (height, width))
-    ruido_fft = (fase_real + 1j * fase_imaginaria)
-    
-    # 5. Aplicar o filtro de amplitude ao ruído
-    fft_filtrado = ruido_fft * amplitude_filtro
-    
-    # 6. Aplicar a Transformada Inversa (iFFT)
-    # Isso nos leva de volta ao domínio espacial (a imagem)
-    ruido_espacial = np.fft.ifft2(fft_filtrado)
-    
-    # 7. Pegar a parte real e normalizar
-    ruido_final = np.real(ruido_espacial)
-    
-    # Normaliza o ruído para o intervalo [0, 1]
-    ruido_normalizado = (ruido_final - np.min(ruido_final)) / \
-                        (np.max(ruido_final) - np.min(ruido_final))
-    
-    return ruido_normalizado
+
+    f2 = fxx**2 + fyy**2
+    f2[0, 0] = 1.0
+
+    amplitude = 1.0 / (f2 ** (beta / 4.0))
+
+    real = np.random.normal(0, 1, (height, width))
+    imag = np.random.normal(0, 1, (height, width))
+    ruido_fft = real + 1j * imag
+
+    filtrado = ruido_fft * amplitude
+    ruido = np.real(np.fft.ifft2(filtrado))
+
+    ruido = (ruido - ruido.min()) / (ruido.max() - ruido.min())
+    return ruido
 
 
+# =========================================================
+# Intensity Maps
+# =========================================================
+def mapa_intensidade_rosa(height, width, min_i=0.05, max_i=0.3):
+    mapa = gerar_ruido_rosa_2d(height, width, beta=2)
+    return min_i + (max_i - min_i) * mapa
+
+
+def mapa_intensidade_luminancia(img_norm, min_i=0.05, max_i=0.3):
+    luma = (
+        0.299 * img_norm[:, :, 0] +
+        0.587 * img_norm[:, :, 1] +
+        0.114 * img_norm[:, :, 2]
+    )
+
+    luma_inv = 1.0 - luma
+    ruido_suave = gerar_ruido_rosa_2d(*luma.shape, beta=2)
+
+    mapa = luma_inv * ruido_suave
+    mapa = (mapa - mapa.min()) / (mapa.max() - mapa.min())
+
+    return min_i + (max_i - min_i) * mapa
+
+
+# =========================================================
+# Noise Application
+# =========================================================
+def aplicar_ruido_rosa(
+    img_norm,
+    modo="luminancia",  # "rosa" | "luminancia"
+    min_i=0.05,
+    max_i=0.3
+):
+    h, w, _ = img_norm.shape
+
+    ruido_rgb = np.stack([
+        gerar_ruido_rosa_2d(h, w),
+        gerar_ruido_rosa_2d(h, w),
+        gerar_ruido_rosa_2d(h, w)
+    ], axis=-1)
+
+    if modo == "rosa":
+        intensidade = mapa_intensidade_rosa(h, w, min_i, max_i)
+    else:
+        intensidade = mapa_intensidade_luminancia(img_norm, min_i, max_i)
+
+    intensidade_rgb = intensidade[:, :, None]
+
+    noisy = img_norm + intensidade_rgb * ruido_rgb
+    noisy = np.clip(noisy, 0, 1)
+
+    return noisy, intensidade.mean()
+
+
+# =========================================================
+# Dataset Processing
+# =========================================================
+def processar_dataset(
+    input_dir,
+    output_dir,
+    modo_ruido="luminancia"
+):
+    os.makedirs(output_dir, exist_ok=True)
+    files = [f for f in os.listdir(input_dir)
+             if f.lower().endswith((".png", ".jpg", ".jpeg", ".bmp"))]
+
+    labels = []
+
+    for fname in tqdm(files, desc="Gerando ruído rosa"):
+        path = os.path.join(input_dir, fname)
+
+        img = Image.open(path).convert("RGB")
+        img_np = np.asarray(img, dtype=np.float32) / 255.0
+
+        noisy, intensidade_media = aplicar_ruido_rosa(
+            img_np,
+            modo=modo_ruido
+        )
+
+        noisy_uint8 = (noisy * 255).astype(np.uint8)
+        out_img = Image.fromarray(noisy_uint8)
+
+        out_path = os.path.join(output_dir, fname)
+        out_img.save(
+            out_path,
+            quality=100,
+            subsampling=0,
+            optimize=False
+        )
+
+        labels.append((fname, intensidade_media))
+
+    return labels
+
+
+# =========================================================
+# Main
+# =========================================================
 if __name__ == "__main__":
-    root_path = '/home/jmn/Dev/python/distortions/data/LIVE/fnoise'
+    input_path = "/mnt/e/Datasets/NOISE_Aug/train/src"
+    output_path = "/mnt/e/Datasets/NOISE_Aug/train/pink_noise"
 
-    list_files = os.listdir(root_path)
-
-    for file_name in list_files:
-        if file_name.endswith('.png') or file_name.endswith('.jpg') or file_name.endswith('.bmp'):
-            image_path = os.path.join(root_path, file_name)
-            print(f"Processando imagem: {image_path}")
-
-            # 1. Carregar a imagem RGB
-            img = Image.open(image_path).convert("RGB")
-            img_array = np.array(img, dtype=np.float32)
-
-            # Pegar dimensões da imagem
-            height, width, channels = img_array.shape
-
-            # Gerar ruído rosa 2D para cada canal
-            noise_r = gerar_ruido_rosa_2d(height, width, beta=2)
-            noise_g = gerar_ruido_rosa_2d(height, width, beta=2)
-            noise_b = gerar_ruido_rosa_2d(height, width, beta=2)
-
-            # Empilha os canais de ruído
-            pink_noise_rgb = np.stack([noise_r, noise_g, noise_b], axis=-1)
-
-            # 2. Normalizar a imagem para [0, 1]
-            img_normalized = img_array / 255.0
-
-            # 3. Adicionar o ruído rosa (ajustar a intensidade conforme necessário)
-            intensity = np.random.uniform(0.1, 0.3)  # Intensidade aleatória entre 0.1 e 0.3
-            noisy_img = img_normalized + intensity * pink_noise_rgb
-            noisy_img = np.clip(noisy_img, 0, 1)  # Garantir que os valores estejam em [0, 1]
-
-            # 4. Converter de volta para imagem e salva
-            noisy_img_uint8 = (noisy_img * 255).astype(np.uint8)
-            noisy_image = Image.fromarray(noisy_img_uint8)
-            noisy_image.save(image_path)
-
+    labels = processar_dataset(
+        input_path,
+        output_path,
+        modo_ruido="luminancia"  # ou "rosa"
+    )

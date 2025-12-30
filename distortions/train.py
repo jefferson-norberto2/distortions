@@ -4,10 +4,11 @@ import torch.optim as optim
 import wandb
 
 from distortions.model.noise_model import NoiseClassificationNet
+from distortions.model.custom_resnet import CustomInception, ModelArchitecture, CustomResNet
 from distortions.dataset.dataloader2 import TrainLoader, get_train_data_loader 
 from distortions.utils.functions import mkdir_savel_folder, train_epoch, validate_epoch
 
-def main(model: NoiseClassificationNet, backbone_name: str, loader: TrainLoader, device: torch.device, num_epochs: int, lr: float, wandb_enable: bool) -> str:
+def main(model, backbone_name: str, loader: TrainLoader, device: torch.device, num_epochs: int, lr: float, wandb_enable: bool) -> str:
     best_acc = 0.0
     best_loss = 100.00
     model_path = ""
@@ -85,7 +86,7 @@ def main(model: NoiseClassificationNet, backbone_name: str, loader: TrainLoader,
     return best_path
 
 def train_model(
-    backbone: str,
+    backbone: ModelArchitecture,
     data_dir: str,
     batch_size: int,
     lr: float,
@@ -96,13 +97,20 @@ def train_model(
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
     # 1. Load Data + Weights for Loss
+    input_size = 299 if backbone == ModelArchitecture.INCEPTION_V3 else 224
     loader = get_train_data_loader(data_dir, batch_size, input_size=input_size)
     
     print(f"Class: {loader.class_names}")
     print(f"Weights to balance: {loader.class_weights}")
 
     # 2. Initialize Model
-    model = NoiseClassificationNet(num_classes=len(loader.class_names))
+
+    if backbone == ModelArchitecture.INCEPTION_V3:
+        model = CustomInception(num_classes=len(loader.class_names), pre_trained=True, training=True)
+    elif backbone == ModelArchitecture.NOISE_NET:
+        model = NoiseClassificationNet(num_classes=len(loader.class_names))
+    else:
+        model = CustomResNet(num_classes=len(loader.class_names), backbone=backbone, pretrained=True)
     model = model.to(device)
 
-    return main(model, backbone, loader, device, num_epochs, lr, wandb_enable)
+    return main(model, backbone.value, loader, device, num_epochs, lr, wandb_enable)
