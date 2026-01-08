@@ -15,12 +15,7 @@ def aplicar_low_light_global(
     img = ImageEnhance.Brightness(img).enhance(bright_factor)
     img = ImageEnhance.Contrast(img).enhance(contrast_factor)
 
-    label = {
-        "brightness": bright_factor,
-        "contrast": contrast_factor
-    }
-
-    return img, label
+    return img
 
 
 def processar_dataset(
@@ -36,12 +31,11 @@ def processar_dataset(
         if f.lower().endswith((".png", ".jpg", ".jpeg", ".bmp"))
     ]
 
-    labels = []
 
     for fname in tqdm(files, desc="Low-light (global)"):
         img = Image.open(os.path.join(input_dir, fname)).convert("RGB")
 
-        img_out, label = aplicar_low_light_global(
+        img_out = aplicar_low_light_global(
             img, bright_range, contrast_range
         )
 
@@ -51,17 +45,12 @@ def processar_dataset(
             subsampling=0
         )
 
-        labels.append((fname, label["brightness"], label["contrast"]))
-
-    with open(os.path.join(output_dir, "labels_low_light.txt"), "w") as f:
-        for name, b, c in labels:
-            f.write(f"{name},{b:.4f},{c:.4f}\n")
 
 
 if __name__ == "__main__":
     processar_dataset(
-        input_dir="/mnt/e/Datasets/NOISE_Aug/train/src",
-        output_dir="/mnt/e/Datasets/NOISE_Aug/train/low_light",
+        input_dir="/mnt/e/Datasets/NOISE_Aug/val/src",
+        output_dir="/mnt/e/Datasets/NOISE_Aug/val/contrast",
         bright_range=(0.55, 0.85),
         contrast_range=(0.65, 0.9)
     )

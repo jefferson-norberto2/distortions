@@ -4,18 +4,18 @@ from PIL import Image
 from tqdm import tqdm
 
 
-def aplicar_jpeg2000_global(
+def aplicar_jpeg_global(
     img,
-    rate_range=(0.1, 1.0)
+    quality_range=(20, 90)
 ):
-    rate = random.uniform(*rate_range)
-    return img, rate
+    quality = random.randint(*quality_range)
+    return img, quality
 
 
-def processar_dataset_jpeg2000(
+def processar_dataset_jpeg(
     input_dir,
     output_dir,
-    rate_range=(0.1, 1.0)
+    quality_range=(20, 90)
 ):
     os.makedirs(output_dir, exist_ok=True)
 
@@ -24,35 +24,28 @@ def processar_dataset_jpeg2000(
         if f.lower().endswith((".png", ".jpg", ".jpeg", ".bmp"))
     ]
 
-    labels = []
 
-    for fname in tqdm(files, desc="JPEG2000 global"):
+    for fname in tqdm(files, desc="JPEG global"):
         img = Image.open(os.path.join(input_dir, fname)).convert("RGB")
 
-        img_out, rate = aplicar_jpeg2000_global(
+        img_out, quality = aplicar_jpeg_global(
             img,
-            rate_range
+            quality_range
         )
 
         out_path = os.path.join(output_dir, os.path.splitext(fname)[0] + ".jpeg")
-
         img_out.save(
             out_path,
-            format="JPEG2000",
-            quality_mode="rates",
-            quality_layers=[rate]
+            format="JPEG",
+            quality=quality,
+            subsampling=1,
+            optimize=False
         )
-
-        labels.append((os.path.basename(out_path), rate))
-
-    with open(os.path.join(output_dir, "labels_jpeg2000.txt"), "w") as f:
-        for name, r in labels:
-            f.write(f"{name},{r:.5f}\n")
 
 
 if __name__ == "__main__":
-    processar_dataset_jpeg2000(
+    processar_dataset_jpeg(
         input_dir="/mnt/e/Datasets/NOISE_Aug/train/src",
         output_dir="/mnt/e/Datasets/NOISE_Aug/train/jpeg2k",
-        rate_range=(0.08, 1.2)
+        quality_range=(2, 85)
     )

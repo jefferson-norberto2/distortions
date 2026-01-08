@@ -78,8 +78,8 @@ def processar_dataset(
 # Main
 # =========================================================
 if __name__ == "__main__":
-    input_path = "/mnt/e/Datasets/NOISE_Aug/train/src"
-    output_path = "/mnt/e/Datasets/NOISE_Aug/train/blur"
+    input_path = "/mnt/e/Datasets/NOISE_Aug/val/src"
+    output_path = "/mnt/e/Datasets/NOISE_Aug/val/blur"
 
     labels = processar_dataset(
         input_path,

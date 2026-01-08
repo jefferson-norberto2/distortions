@@ -2,6 +2,7 @@ import os
 import random
 from PIL import Image
 from tqdm import tqdm
+import numpy as np
 
 
 def aplicar_jpeg_global(
@@ -33,19 +34,19 @@ def processar_dataset_jpeg(
             quality_range
         )
 
-        out_path = os.path.join(output_dir, fname)
+        out_path = os.path.join(output_dir, os.path.splitext(fname)[0] + ".jpeg")
         img_out.save(
             out_path,
             format="JPEG",
             quality=quality,
-            subsampling=2,
+            subsampling=np.random.choice([1, 2, 3, 4, 5]),
             optimize=False
         )
 
 
 if __name__ == "__main__":
     processar_dataset_jpeg(
-        input_dir="/mnt/e/Datasets/NOISE_Aug/train/src",
-        output_dir="/mnt/e/Datasets/NOISE_Aug/train/jpeg",
-        quality_range=(10, 85)
+        input_dir="/mnt/e/Datasets/NOISE_Aug/val/src",
+        output_dir="/mnt/e/Datasets/NOISE_Aug/val/jpeg",
+        quality_range=(2, 85)
     )
