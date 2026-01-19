@@ -14,19 +14,19 @@ if __name__ == '__main__':
     download.download_file(URL_CSIQ, './data/ECSIQ.zip', unzip=True)
 
     backbone_choice = ModelArchitecture.INCEPTION_V3
-    best_model_path = train_model(
-        backbone=backbone_choice, 
-        data_dir='./data/ECSIQ/',
-        num_epochs=10, 
-        lr=0.0001,
-        batch_size=16,
-        wandb_enable=True
-    )
+    # best_model_path = train_model(
+    #     backbone=backbone_choice, 
+    #     data_dir='./data/MYCSIQ/',
+    #     num_epochs=10, 
+    #     lr=0.0001,
+    #     batch_size=16,
+    #     wandb_enable=True
+    # )
 
     test_model(
-        model_path=best_model_path,
+        model_path='runs/train/inception_v3_3/best_model_7.pth',
         backbone=backbone_choice,
-        data_dir='./data/LIVE/',
+        data_dir='data/LIVE_croped/val/',
         batch_size=16,
         wandb_enable=True
     )

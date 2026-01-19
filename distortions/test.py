@@ -52,28 +52,6 @@ def test_model(data_dir: str, model_path: str, backbone: ModelArchitecture, wand
             all_preds.extend(preds.cpu().numpy())
             all_labels.extend(labels.cpu().numpy())
 
-            for i, pred in enumerate(preds):
-                pred_label = pred.item()
-                true_label = labels[i].item()
-
-                if pred_label != true_label:
-                    img = imgs[i].cpu().numpy().transpose(1, 2, 0)
-
-                    # opcional: desnormalizar aqui
-                    mean = np.array([0.485, 0.456, 0.406])
-                    std  = np.array([0.229, 0.224, 0.225])
-
-                    img = imgs[i].cpu().numpy().transpose(1, 2, 0)
-                    img = img * std + mean          # desnormaliza
-                    img = np.clip(img, 0, 1)        # garante faixa válida
-
-                    plt.imsave(
-                        f"{save_dir}/misclassified_{backbone}_pred_{pred_label}_true_{true_label}.png",
-                        img
-                    )
-
-
-
     # --- Matriz de confusão ---
     cm = confusion_matrix(all_labels, all_preds)
     disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=loader.class_names)

@@ -1,15 +1,15 @@
 from ultralytics import YOLO
 
 # Carrega o modelo treinado
-model = YOLO('runs/classify/train11/weights/best.pt')
+model = YOLO('runs/classify/train4/weights/best.pt')
 
 # Valida o modelo na base de dados LIVE
 results = model.val(
-    data='data/LIVE',
-    imgsz=256,
+    data='/home/jmn/dev/python/distortions/data/LIVE_croped',
+    imgsz=512,
     batch=64,
     device=0
 )
 
 # Exibe os resultados
-print(results)
+#print(results)
