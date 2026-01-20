@@ -35,7 +35,7 @@ def get_dataloaders(data_dir: str, train_split: float, batch_size: int) -> tuple
 		tuple[DataLoader, DataLoader]: Training and validation dataloaders.
 	'''
 	transform = transforms.Compose([
-        transforms.Resize(299),
+    	#transforms.CenterCrop(299),
 		transforms.ToTensor(),
 	])
 

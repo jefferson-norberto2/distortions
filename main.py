@@ -14,8 +14,8 @@ if __name__ == '__main__':
 
     # Train and test model
     model = 'inception_v3'
-    wandb_enable = True
-    # best = train_model(backbone=model, data_dir='./data/ECSIQ/', num_epochs=20, batch_size=24, lr=0.0001, wandb_enable=wandb_enable)
-    test_model(weight_path='/home/jmn/Dev/python/distortions/runs/train/20251203-083051/best_distortion_2.pth', name_model=model, folder_path='./data/LIVE/', wandb_enable=wandb_enable)
+    wandb_enable = False
+    best = train_model(backbone=model, data_dir='./data/csiq 299/', num_epochs=10, batch_size=24, lr=0.0001, wandb_enable=wandb_enable)
+    test_model(weight_path='runs/train/20260120-114504/best_distortion_6.pth', name_model=model, folder_path='./data/LIVE_croped (copy)/', wandb_enable=wandb_enable)
 
 

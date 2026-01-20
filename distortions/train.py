@@ -4,6 +4,8 @@ import torch.optim as optim
 import wandb
 import time
 import os
+import matplotlib.pyplot as plt
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 
 from distortions.model.custom_resnet import CustomResNet, CustomInception
 from distortions.utils.functions import get_backbone_and_weights, train_epoch, validate_epoch
@@ -46,7 +48,7 @@ def main(model, backbone, dataset_name, train_loader, val_loader, device, num_ep
         print(f"\nEpoch [{epoch+1}/{num_epochs}]")
 
         train_loss, train_acc, train_precision, train_recall  = train_epoch(model, train_loader, criterion, optimizer, device)
-        val_loss, val_acc, val_precision, val_recall = validate_epoch(model, val_loader, criterion, device)
+        val_loss, val_acc, val_precision, val_recall, all_preds, all_labels = validate_epoch(model, val_loader, criterion, device)
 
         print(f"  ➤ Train Loss: {train_loss:.4f}, Train Acc: {train_acc:.2f}%, Train Precision: {train_precision:.2f}%, Train Recall: {train_recall:.2f}% "
               f"| Val Loss: {val_loss:.4f}, Val Acc: {val_acc:.2f}%, Vall Precision: {val_precision:.2f}%, Vall Recall: {val_recall:.2f}%")
@@ -71,6 +73,14 @@ def main(model, backbone, dataset_name, train_loader, val_loader, device, num_ep
         if (epoch + 1) % 5 == 0:
             for param_group in optimizer.param_groups:
                 param_group['lr'] *= 0.5
+        
+        if epoch == num_epochs - 1:
+            # save confusion matrix
+            
+            cm = confusion_matrix(all_labels, all_preds)
+            disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=train_loader.dataset.classes)
+            disp.plot(cmap=plt.cm.Blues)
+            plt.savefig(f"{save_dir}/confusion_matrix_epoch_{epoch+1}.png")
 
     wandb.finish()
     return model_path

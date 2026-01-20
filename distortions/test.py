@@ -20,7 +20,7 @@ def test_model(folder_path="/home/jmn/host/dev/Datasets/IQA/ELIVE/",
     
     # --- Transformação das imagens ---
     transform = transforms.Compose([
-        transforms.CenterCrop(299),
+        #transforms.CenterCrop(299),
         transforms.ToTensor(),
     ])
 
@@ -45,21 +45,9 @@ def test_model(folder_path="/home/jmn/host/dev/Datasets/IQA/ELIVE/",
 
     # --- Avaliação ---
     criterion = torch.nn.CrossEntropyLoss()
-    val_loss, val_acc, precision, recall = validate_epoch(model, val_loader, criterion, device)
+    val_loss, val_acc, precision, recall, all_preds, all_labels = validate_epoch(model, val_loader, criterion, device)
     print(f"| Val Loss: {val_loss:.4f}, Val Acc: {val_acc:.2f}%, Precision: {precision:.4f}, Recall: {recall:.4f} |")
     wandb.log({"val_loss": val_loss, "val_acc": val_acc, "val_precision": precision, "val_recall": recall})
-
-    # --- Geração da matriz de confusão ---
-    all_preds = []
-    all_labels = []
-
-    with torch.no_grad():
-        for imgs, labels in val_loader:
-            imgs, labels = imgs.to(device), labels.to(device)
-            outputs = model(imgs)
-            _, preds = torch.max(outputs, 1)
-            all_preds.extend(preds.cpu().numpy())
-            all_labels.extend(labels.cpu().numpy())
 
     # --- Cria a matriz de confusão ---
     cm = confusion_matrix(all_labels, all_preds)

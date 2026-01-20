@@ -90,14 +90,15 @@ def train_epoch(model, train_loader, criterion, optimizer, device):
 
         current_loss = running_loss / total
         current_acc = accuracy_score(all_labels, all_preds) * 100
-        precision = precision_score(all_labels, all_preds, average="macro", zero_division=0) * 100
-        recall = recall_score(all_labels, all_preds, average="macro", zero_division=0) * 100
+        
 
-        progress_bar.set_postfix(loss=f"{current_loss:.4f}", acc=f"{current_acc:.2f}%",
-                                 precision=f"{precision:.2f}%", recall=f"{recall:.2f}%")
+        progress_bar.set_postfix(loss=f"{current_loss:.4f}", acc=f"{current_acc:.2f}%")
 
     train_loss = running_loss / len(train_loader.dataset)
-
+    
+    precision = precision_score(all_labels, all_preds, average="macro", zero_division=0) * 100
+    recall = recall_score(all_labels, all_preds, average="macro", zero_division=0) * 100
+    
     return train_loss, current_acc, precision, recall
 
 
@@ -128,11 +129,12 @@ def validate_epoch(model, val_loader, criterion, device):
 
             current_loss = running_loss / total
             current_acc = accuracy_score(all_labels, all_preds) * 100
-            precision = precision_score(all_labels, all_preds, average="macro", zero_division=0) * 100
-            recall = recall_score(all_labels, all_preds, average="macro", zero_division=0) * 100
-            progress_bar.set_postfix(loss=f"{current_loss:.4f}", acc=f"{current_acc:.2f}%", precision=f"{precision:.2f}%", recall=f"{recall:.2f}%")
+            
+            progress_bar.set_postfix(loss=f"{current_loss:.4f}", acc=f"{current_acc:.2f}%")
 
     val_loss = running_loss / len(val_loader.dataset)
     
-
-    return val_loss, current_acc, precision, recall
+    precision = precision_score(all_labels, all_preds, average="macro", zero_division=0) * 100
+    recall = recall_score(all_labels, all_preds, average="macro", zero_division=0) * 100
+    
+    return val_loss, current_acc, precision, recall, all_preds, all_labels
