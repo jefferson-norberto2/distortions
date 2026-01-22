@@ -164,6 +164,44 @@ class FilesManipulation:
                 except Exception as e:
                     print(f"Warning: Was not able to process {file_path}: {e}")
 
+    def merge_folders(self, 
+                      source_folder: str, 
+                      destination_folder: str
+                  ) -> None:
+        """
+        Move all files from source_folder to destination_folder.
+        If a file already exists in destination_folder, it will be skipped.
+        """
+        if source_folder == destination_folder:
+            raise ValueError("Source and destination folders must be different.")
+
+        if not os.path.exists(source_folder):
+            raise FileNotFoundError(f"Source folder not found: {source_folder}")
+
+        os.makedirs(destination_folder, exist_ok=True)
+
+        for dirpath, dirnames, filenames in os.walk(source_folder):
+            rel_path = os.path.relpath(dirpath, source_folder)
+            dest_dir = os.path.join(destination_folder, rel_path)
+
+            os.makedirs(dest_dir, exist_ok=True)
+
+            for filename in filenames:
+                src_file = os.path.join(dirpath, filename)
+                dest_file = os.path.join(dest_dir, filename)
+
+                if os.path.exists(dest_file):
+                    print(f"⚠️  Skipping (already exists): {dest_file}")
+                    continue
+
+                try:
+                    os.rename(src_file, dest_file)
+                    print(f"✅ Moved: {dest_file}")
+                except Exception as e:
+                    print(f"Error moving {src_file}: {e}")
+
+        print("\n✅ All files have been processed!")
+
 if __name__ == "__main__":
     manipulator = FilesManipulation()
     manipulator.crop_single_image(
