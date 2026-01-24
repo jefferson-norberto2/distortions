@@ -40,36 +40,35 @@ class FilesManipulation:
             raise RuntimeError(f"Error to flip image {image_path}: {e}")
 
     def flip_images(self, 
-                    directory: str, 
+                    folder_path: str, 
                     types: List[str]
                 ) -> None:
-        main_directory = directory
+        """
+            Function to flip all images in a folder.
 
-        print("🚀 Iniciando o script de flip de imagens...")
+            parameters:
+            - folder_path: Path to the folder containing images to be flipped.
+            - types: List of flip types to apply ('horizontal', 'vertical', 'both')
 
-        for folder_name in tqdm(os.listdir(main_directory)):
+        """
+        print("🚀 Starting flip of images...")
+
+        for file_name in tqdm(os.listdir(folder_path)):
             
-            folder_path = os.path.join(main_directory, folder_name)
+            file_path = os.path.join(folder_path, file_name)
 
-            if os.path.isdir(folder_path):
-                print(f"\n📁 Processando a pasta: {folder_name}")
+            if file_name.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp', '.tiff')):
+                
+                for flip_type in types:
 
-                for file_name in tqdm(os.listdir(folder_path)):
-                    
-                    file_path = os.path.join(folder_path, file_name)
+                    fliped_image = self.flip_single_image(file_path, flip_type=flip_type)
 
-                    if file_name.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp', '.tiff')):
+                    if fliped_image:
+                        fliped_name = f"{flip_type}_{file_name}"
                         
-                        for flip_type in types:
-
-                            fliped_image = self.flip_single_image(file_path, flip_type=flip_type)
-
-                            if fliped_image:
-                                fliped_name = f"{flip_type}_{file_name}"
-                                
-                                fliped_path = os.path.join(folder_path, fliped_name)
-                                
-                                fliped_image.save(fliped_path)
+                        fliped_path = os.path.join(folder_path, fliped_name)
+                        
+                        fliped_image.save(fliped_path)
 
     def crop_single_image(
             self, 
@@ -79,12 +78,15 @@ class FilesManipulation:
             positions: List[str] = ['center']
         ):
         """
-        Recorta a imagem em posições específicas baseadas no tamanho desejado.
-        
-        :param crop_size: Inteiro (para quadrados) ou tupla (w, h). Tamanho do recorte.
-        :param positions: Lista com as posições desejadas. Opções:
-                        'center', 'top_left', 'top_right', 'bottom_left', 'bottom_right'.
-                        Padrão é ['center'].
+        Crop a single image into multiple parts based on specified positions.
+
+        parameters:
+        - input_file_path: Path to the input image file.
+        - output_path: Directory where cropped images will be saved.
+        - crop_size: Size of the crop. Can be an integer (for square crops)
+                     or a tuple (width, height).
+        - positions: List of positions to crop from. Options include:
+                     'top_left', 'top_right', 'bottom_left', 'bottom_right', 'center'.
         """
         os.makedirs(output_path, exist_ok=True)
         
@@ -204,9 +206,13 @@ class FilesManipulation:
 
 if __name__ == "__main__":
     manipulator = FilesManipulation()
-    manipulator.crop_single_image(
-        input_file_path='/root/Documents/dev/python/distortions/data/LIVE/train/src_imgs/bikes.bmp',
-        output_path='/root/Documents/dev/python/distortions/data/LIVE/train/src_imgs/',
+    # manipulator.flip_images(
+    #     folder_path="/root/Documents/dev/Datasets/NOISE_512/val/src",
+    #     types=['horizontal', 'vertical', 'both']
+    # )
+    manipulator.crop_images(
+        input_folder="/root/Documents/dev/Datasets/NOISE_512/train/src",
+        output_folder="/root/Documents/dev/Datasets/NOISE_512/train/cropped",
         crop_size=256,
-        positions=['center']
+        positions=['center', 'top_left', 'top_right', 'bottom_left', 'bottom_right']
     )

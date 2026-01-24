@@ -3,18 +3,36 @@ import cv2
 from PIL import Image
 import io
 import os
+from tqdm import tqdm
 
 class DistortionGenerator:
     def __init__(self):
         self.img_uint8 = None
+        self.img = None
+        
+        self.height = None
+        self.width = None
+        self.channels = None
+        
+        self.img_name = None
+        self.folder_path = None
+        self.root_path = None
     
     def change_image(self, new_image_path: str):
         """Permite alterar a imagem de entrada."""
         self.img_uint8 = cv2.imread(new_image_path)
+
         if self.img_uint8 is None:
             raise ValueError(f"Image not found at path: {new_image_path}.")
+        
         self.img = self.img_uint8.astype(np.float32) / 255.0
-        self.h, self.w, self.c = self.img.shape
+        self.height, self.width, self.channels = self.img.shape
+        self.img_name = self._get_image_name(new_image_path)
+        self.folder_path = os.path.dirname(new_image_path)
+        self.root_path = os.path.dirname(self.folder_path)
+
+    def _get_image_name(self, image_path: str):
+        return os.path.splitext(os.path.basename(image_path))[0]
     
     def _check_image_loaded(self):
         if self.img_uint8 is None:
@@ -26,10 +44,12 @@ class DistortionGenerator:
         self._check_image_loaded()
         img_clipped = np.clip(distorted_img, 0, 1)
         img_out = (img_clipped * 255).astype(np.uint8)
-        filename = f"dist_{distortion_name}_level_{level}.png"
-        cv2.imwrite(filename, img_out)
-        return img_out
-
+        save_path = f'{self.root_path}/{distortion_name}'
+        os.makedirs(save_path, exist_ok=True)
+        file_path = f"{save_path}/dist_{level}_{self.img_name}.png"
+        cv2.imwrite(file_path, img_out)
+    
+    # 1. Gaussian Blur
     def add_gaussian_blur(self, kernel_size=(15, 15), sigma=5):
         """
         Applies a Gaussian filter.
@@ -144,8 +164,8 @@ class DistortionGenerator:
 
         # Gera ruído rosa para cada canal separadamente
         noise_layer = np.zeros_like(self.img)
-        for ch in range(self.c):
-            noise_layer[:,:,ch] = pink_noise_2d((self.h, self.w))
+        for ch in range(self.channels):
+            noise_layer[:,:,ch] = pink_noise_2d((self.height, self.width))
             
         noisy_img = self.img + (noise_layer * intensity)
         return noisy_img
@@ -156,33 +176,42 @@ if __name__ == "__main__":
     try:
         generator = DistortionGenerator() 
 
-        generator.change_image('/root/Documents/dev/python/distortions/data/ECSIQ/src_imgs/both_part_2_trolley.png.png')
-        
-        # 1. Blur
-        res_blur = generator.add_gaussian_blur(sigma=1)
-        generator.save_output(res_blur, "blur", 1)
+        folder_path = '/root/Documents/dev/Datasets/NOISE_256/val/src_imgs/'
+        files = [file for file in os.listdir(folder_path) if file.endswith('.png')]
 
-        # 2. White Noise
-        res_wn = generator.add_white_noise(variance=0.01)
-        generator.save_output(res_wn, "white_noise", 1)
+        for file in tqdm(files):
+            image_path = os.path.join(folder_path, file)
+            generator.change_image(image_path)
+            
+            # 1. Blur
+            sigma_value = np.random.uniform(0.8, 2.1)
+            res_blur = generator.add_gaussian_blur(sigma=sigma_value)
+            generator.save_output(res_blur, "blur", f'{sigma_value:.2f}')
 
-        # 3. JPEG
-        res_jpg = generator.add_jpeg_compression(quality=10) # Qualidade baixa = mais artefatos
-        generator.save_output(res_jpg, "jpeg", 1)
+            # 2. White Noise
+            varicance_value = np.random.uniform(0.001, 0.05)
+            res_wn = generator.add_white_noise(variance=varicance_value)
+            generator.save_output(res_wn, "white_noise", f'{varicance_value:.4f}')
 
-        # 4. JPEG 2000
-        res_jp2 = generator.add_jpeg2000_compression(compression_ratio=1) # Ratio alto = menor qualidade
-        generator.save_output(res_jp2, "jpeg2000", 1)
+            # 3. JPEG
+            quality_value = np.random.randint(5, 30)
+            res_jpg = generator.add_jpeg_compression(quality=quality_value) # Qualidade baixa = mais artefatos
+            generator.save_output(res_jpg, "jpeg", quality_value)
 
-        # 5. Contrast Decrement
-        res_contrast = generator.change_contrast(alpha=0.5) # Valor maior reduz menos o contraste
-        generator.save_output(res_contrast, "contrast", 1)
-        
-        # 6. Pink Noise (Específico da CSIQ)
-        res_pink = generator.add_pink_noise(intensity=0.05)
-        generator.save_output(res_pink, "pink_noise", 1)
+            # 4. JPEG 2000
+            compression_ratio = np.random.randint(1, 16)
+            res_jp2 = generator.add_jpeg2000_compression(compression_ratio=compression_ratio) # Ratio alto = menor qualidade
+            generator.save_output(res_jp2, "jpeg2000", compression_ratio)
 
-        print("Distorções geradas com sucesso.")
+            # 5. Contrast Decrement
+            alpha_value = np.random.uniform(0.2, 0.8)
+            res_contrast = generator.change_contrast(alpha=alpha_value) # Valor maior reduz menos o contraste
+            generator.save_output(res_contrast, "contrast", f'{alpha_value:.2f}')
+            
+            # 6. Pink Noise (Específico da CSIQ)
+            intensity_value = np.random.uniform(0.01, 0.1)
+            res_pink = generator.add_pink_noise(intensity=intensity_value)
+            generator.save_output(res_pink, "pink_noise", f'{intensity_value:.4f}')
 
     except Exception as e:
         print(e)
