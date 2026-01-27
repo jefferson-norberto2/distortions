@@ -4,12 +4,14 @@ import torch.optim as optim
 import wandb
 import time
 import os
+
 import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 
-from distortions.model.custom_resnet import CustomResNet, CustomInception
-from distortions.utils.functions import get_backbone_and_weights, train_epoch, validate_epoch
-from distortions.dataset.dataloaders import get_dataloaders  
+from distortions.model.custom_resnet import CustomResNet
+from distortions.model.custom_inception import CustomInception
+from distortions.utils.functions import train_epoch, validate_epoch
+from distortions.dataset.dataloaders import get_train_dataloaders  
 
 def main(model, backbone, dataset_name, train_loader, val_loader, device, num_epochs, lr, wandb_enable) -> str:
     best_acc = 0.0
@@ -74,9 +76,7 @@ def main(model, backbone, dataset_name, train_loader, val_loader, device, num_ep
             for param_group in optimizer.param_groups:
                 param_group['lr'] *= 0.5
         
-        if epoch == num_epochs - 1:
-            # save confusion matrix
-            
+        if epoch == num_epochs - 1:            
             cm = confusion_matrix(all_labels, all_preds)
             disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=train_loader.dataset.classes)
             disp.plot(cmap=plt.cm.Blues)
@@ -95,7 +95,7 @@ def train_model(
     num_epochs=10,
     wandb_enable=True
 ):
-    train_loader, val_loader = get_dataloaders(
+    train_loader, val_loader = get_train_dataloaders(
         data_dir=data_dir, 
         train_split=train_split, 
         batch_size=batch_size
@@ -103,20 +103,18 @@ def train_model(
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    back, weights = get_backbone_and_weights(name_model=backbone)
 
     if backbone.lower() == "inception_v3":
         model = CustomInception(
             num_classes=7,
-            backbone=back,
-            weights=weights,
+            pre_treined=True,
             training=True
         ).to(device)
     else:
         model = CustomResNet(
             num_classes=7,
-            backbone=back,
-            weights=weights
+            pre_treined=True,
+            backbone=backbone
         ).to(device)
 
     dataset_name = data_dir.strip('/').split('/')[-1]

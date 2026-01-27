@@ -3,29 +3,6 @@ import numpy as np
 from torchvision import models
 from tqdm import tqdm
 from sklearn.metrics import precision_score, recall_score, accuracy_score
-from typing import Tuple
-
-def get_backbone_and_weights(name_model='resnet_50') -> Tuple:
-    if name_model == 'resnet_18':
-        back = models.resnet18
-        weights = models.ResNet18_Weights.IMAGENET1K_V1
-    if name_model == 'resnet_34':
-        back = models.resnet34
-        weights = models.ResNet34_Weights.IMAGENET1K_V1
-    elif name_model == 'resnet_50':
-        back = models.resnet50
-    elif name_model == 'resnet_101':
-        back = models.resnet101
-        weights = models.ResNet101_Weights.IMAGENET1K_V2
-    elif name_model == 'resnet_152':
-        back = models.resnet152
-        weights = models.ResNet152_Weights.IMAGENET1K_V2
-    elif name_model == 'inception_v3':
-        back = models.inception_v3
-        weights = models.Inception_V3_Weights.IMAGENET1K_V1
-    else:
-        raise ValueError(f"Model error: {name_model}, choose: 'resnet_18', 'resnet_34', 'resnet_50', 'resnet_101', 'resnet_152', 'inception_v3'.")
-    return back, weights
 
 def class_distribution(dataset, train_dataset, val_dataset):
     # classes do dataset

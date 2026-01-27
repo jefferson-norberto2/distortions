@@ -1,40 +1,34 @@
-from torchvision import models
 from torch.nn import Module, Linear
+from torchvision import models
 
 class CustomResNet(Module):
     def __init__(self, 
                  num_classes: int, 
-                 backbone, 
-                 weights
+                 pre_treined: bool,
+                backbone: str = 'resnet_50'
                  ):
         
         super(CustomResNet, self).__init__()
     
-        self.backbone = backbone(weights=weights)
+        self.backbone = self.get_backbone_and_weights(name_model=backbone, pre_trained=pre_treined)
         
         num_ftrs = self.backbone.fc.in_features
         self.backbone.fc = Linear(num_ftrs, num_classes)
+    
+    def get_backbone_and_weights(self, name_model: str, pre_trained: bool) -> Module:
+        if name_model == 'resnet_50':
+            weights = models.ResNet50_Weights.IMAGENET1K_V2 if pre_trained else None
+            back = models.resnet50(weights=weights)
+        elif name_model == 'resnet_101':
+            weights = models.ResNet101_Weights.IMAGENET1K_V2 if pre_trained else None
+            back = models.resnet101(weights=weights)
+        elif name_model == 'resnet_152':
+            weights = models.ResNet152_Weights.IMAGENET1K_V2 if pre_trained else None
+            back = models.resnet152(weights=weights)
+        else:
+            raise ValueError(f"Model error: {name_model}, choose: 'resnet_50', 'resnet_101', 'resnet_152'.")
+        return back
 
     def forward(self, x):
         return self.backbone(x)
 
-class CustomInception(Module):
-    def __init__(self, num_classes, backbone, weights, training):
-        super().__init__()
-        self.backbone = backbone(weights=weights)
-        self.training = training
-
-        # troca FC principal
-        num_ftrs = self.backbone.fc.in_features
-        self.backbone.fc = Linear(num_ftrs, num_classes)
-
-        # troca FC da cabeça auxiliar
-        if self.backbone.AuxLogits is not None:
-            num_aux = self.backbone.AuxLogits.fc.in_features
-            self.backbone.AuxLogits.fc = Linear(num_aux, num_classes)
-
-    def forward(self, x):
-        out = self.backbone(x)
-        if self.training:
-            return out.logits, out.aux_logits
-        return out
