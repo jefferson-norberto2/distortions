@@ -9,14 +9,13 @@ readme = "README.md"
 requires-python = ">=3.11,<3.15"
 
 dependencies = [
-    "torch (>=2.9.0,<3.0.0)",
-    "torchvision (>=0.24.0,<0.25.0)",
-    "torchaudio (>=2.9.0,<3.0.0)",
     "tqdm (>=4.67.1,<5.0.0)",
     "wandb (>=0.15.4,<1.0.0)",
     "scikit-learn (>=1.4.2,<2.0.0)",
     "matplotlib (>=3.8.0,<4.0.0)",
     "gdown (>=5.2.0,<6.0.0)",
+    "opencv-python (>=4.13.0.90,<5.0.0.0)",
+    "ultralytics (>=8.4.7,<9.0.0)",
 ]
 
 [build-system]

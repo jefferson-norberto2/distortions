@@ -170,13 +170,12 @@ class DistortionGenerator:
         noisy_img = self.img + (noise_layer * intensity)
         return noisy_img
 
-# --- Exemplo de Uso ---
-# Substitua 'input.jpg' pela sua imagem de referência
+
 if __name__ == "__main__":
     try:
         generator = DistortionGenerator() 
 
-        folder_path = '/root/Documents/dev/Datasets/NOISE_256/val/src_imgs/'
+        folder_path = '/root/Documents/dev/Datasets/NOISE_256_v2/train/src_imgs/'
         files = [file for file in os.listdir(folder_path) if file.endswith('.png')]
 
         for file in tqdm(files):
@@ -184,32 +183,32 @@ if __name__ == "__main__":
             generator.change_image(image_path)
             
             # 1. Blur
-            sigma_value = np.random.uniform(0.8, 2.1)
+            sigma_value = np.random.uniform(1.0, 3.0)
             res_blur = generator.add_gaussian_blur(sigma=sigma_value)
             generator.save_output(res_blur, "blur", f'{sigma_value:.2f}')
 
             # 2. White Noise
-            varicance_value = np.random.uniform(0.001, 0.05)
+            varicance_value = np.random.uniform(0.005, 0.09)
             res_wn = generator.add_white_noise(variance=varicance_value)
             generator.save_output(res_wn, "white_noise", f'{varicance_value:.4f}')
 
             # 3. JPEG
-            quality_value = np.random.randint(5, 30)
+            quality_value = np.random.randint(5, 25)
             res_jpg = generator.add_jpeg_compression(quality=quality_value) # Qualidade baixa = mais artefatos
             generator.save_output(res_jpg, "jpeg", quality_value)
 
             # 4. JPEG 2000
-            compression_ratio = np.random.randint(1, 16)
+            compression_ratio = np.random.randint(1, 15)
             res_jp2 = generator.add_jpeg2000_compression(compression_ratio=compression_ratio) # Ratio alto = menor qualidade
             generator.save_output(res_jp2, "jpeg2000", compression_ratio)
 
             # 5. Contrast Decrement
-            alpha_value = np.random.uniform(0.2, 0.8)
+            alpha_value = np.random.uniform(0.1, 0.7)
             res_contrast = generator.change_contrast(alpha=alpha_value) # Valor maior reduz menos o contraste
             generator.save_output(res_contrast, "contrast", f'{alpha_value:.2f}')
             
             # 6. Pink Noise (Específico da CSIQ)
-            intensity_value = np.random.uniform(0.01, 0.1)
+            intensity_value = np.random.uniform(0.09, 0.2)
             res_pink = generator.add_pink_noise(intensity=intensity_value)
             generator.save_output(res_pink, "pink_noise", f'{intensity_value:.4f}')
 
