@@ -68,8 +68,15 @@ def train_epoch(model, train_loader, criterion, optimizer, device):
         current_loss = running_loss / total
         current_acc = accuracy_score(all_labels, all_preds) * 100
         
+        gpu_mem = 0
+        if torch.cuda.is_available():
+            gpu_mem = torch.cuda.memory_reserved(device) / 1024**3
 
-        progress_bar.set_postfix(loss=f"{current_loss:.4f}", acc=f"{current_acc:.2f}%")
+        progress_bar.set_postfix(
+            loss=f"{current_loss:.4f}", 
+            acc=f"{current_acc:.2f}%", 
+            mem=f"{gpu_mem:.2f}GB"
+        )
 
     train_loss = running_loss / len(train_loader.dataset)
     

@@ -20,16 +20,16 @@ def test_model(folder_path="/home/jmn/host/dev/Datasets/IQA/ELIVE/",
     wandb.init(project="distortions-detect", name=f"evaluation_{name_model}", mode="online" if wandb_enable else "disabled")
 
     # --- Dataset e DataLoader ---
-    val_loader, dataset = get_val_dataloader(data_dir=folder_path, batch_size=16, im_size=299 if name_model == 'inception_v3' else 224)
-    class_names = dataset.classes  # nomes das classes
+    val_loader, dataset = get_val_dataloader(data_dir=folder_path, batch_size=16, im_size=300 if name_model == 'inception_v3' else 224)
+    class_names = dataset.classes
 
     # --- Dispositivo ---
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
     if name_model == 'inception_v3':
-        model = CustomInception(num_classes=7, pre_treined=False, training=False)
+        model = CustomInception(num_classes=len(dataset.classes), pre_treined=False, training=False)
     else:
-        model = CustomResNet(num_classes=7, pre_treined=False, backbone=name_model)
+        model = CustomResNet(num_classes=len(dataset.classes), pre_treined=False, backbone=name_model)
         
     model.load_state_dict(torch.load(weight_path, map_location=device))
     model = model.to(device)
@@ -42,19 +42,16 @@ def test_model(folder_path="/home/jmn/host/dev/Datasets/IQA/ELIVE/",
     wandb.log({"val_loss": val_loss, "val_acc": val_acc, "val_precision": precision, "val_recall": recall})
 
     # --- Cria a matriz de confusão ---
-    cm = confusion_matrix(all_labels, all_preds)
+    cm = confusion_matrix(all_preds, all_labels)
     disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=class_names)
 
     time_stamp = time.strftime("%Y%m%d-%H%M%S")
     save_dir = f"runs/test/{time_stamp}"
     os.makedirs(save_dir, exist_ok=True)
 
-    # --- Visualização ---
-    fig, ax = plt.subplots(figsize=(8, 8))
-    disp.plot(ax=ax, cmap='Blues', values_format='d', colorbar=False)
-    plt.title(f"Matriz de Confusão - {name_model}")
-    plt.xticks(rotation=45)
-    plt.tight_layout()
+    disp.plot(cmap=plt.cm.Blues)
+    plt.xlabel('True Label')     
+    plt.ylabel('Predicted Label')
     plt.savefig(f"{save_dir}/confusion_matrix_{name_model}.png", dpi=300)
     wandb.log({f"confusion_matrix_{name_model}": wandb.Image(f"{save_dir}/confusion_matrix_{name_model}.png")})
 

@@ -13,7 +13,7 @@ from distortions.model.custom_inception import CustomInception
 from distortions.utils.functions import train_epoch, validate_epoch
 from distortions.dataset.dataloaders import get_train_dataloaders  
 
-def main(model, backbone, dataset_name, train_loader, val_loader, device, num_epochs, lr, wandb_enable) -> str:
+def main(model, backbone, dataset_name, train_loader, val_loader, train_dataset, val_dataset, device, num_epochs, lr, wandb_enable) -> str:
     best_acc = 0.0
     best_loss = 100.00
     model_path = ""
@@ -34,12 +34,19 @@ def main(model, backbone, dataset_name, train_loader, val_loader, device, num_ep
             "dataset": dataset_name,
             "train_size": len(train_loader.dataset),
             "val_size": len(val_loader.dataset),
+            "num_classes": len(train_dataset.classes),
+            "classes": train_dataset.classes
         },
         name=f"training_{backbone}"
     )
-
-    time_stamp = time.strftime("%Y%m%d-%H%M%S")
-    save_dir = f"runs/train/{time_stamp}"
+    
+    base_dir = "runs/train"
+    os.makedirs(base_dir, exist_ok=True)
+    
+    count = 0    
+    count = len([count+1 for folder in os.listdir("runs/train") if folder.startswith(backbone)])
+            
+    save_dir = f"{base_dir}/{backbone}_{count+1}"
     os.makedirs(save_dir, exist_ok=True)
 
     with open(f"{save_dir}/config.yaml", "w") as file:
@@ -77,9 +84,11 @@ def main(model, backbone, dataset_name, train_loader, val_loader, device, num_ep
                 param_group['lr'] *= 0.5
         
         if epoch == num_epochs - 1:            
-            cm = confusion_matrix(all_labels, all_preds)
+            cm = confusion_matrix(all_preds, all_labels)
             disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=train_loader.dataset.classes)
             disp.plot(cmap=plt.cm.Blues)
+            plt.xlabel('True Label')     
+            plt.ylabel('Predicted Label') 
             plt.savefig(f"{save_dir}/confusion_matrix_epoch_{epoch+1}.png")
 
     wandb.finish()
@@ -95,7 +104,7 @@ def train_model(
     num_epochs=10,
     wandb_enable=True
 ):
-    train_loader, val_loader = get_train_dataloaders(
+    train_loader, val_loader, train_dataset, val_dataset = get_train_dataloaders(
         data_dir=data_dir, 
         batch_size=batch_size,
         im_size=300,
@@ -106,20 +115,20 @@ def train_model(
 
     if backbone.lower() == "inception_v3":
         model = CustomInception(
-            num_classes=7,
+            num_classes=len(train_dataset.classes),
             pre_treined=True,
             training=True
         ).to(device)
     else:
         model = CustomResNet(
-            num_classes=7,
+            num_classes=len(train_dataset.classes),
             pre_treined=True,
             backbone=backbone
         ).to(device)
 
     dataset_name = data_dir.strip('/').split('/')[-1]
 
-    return main(model, backbone, dataset_name, train_loader, val_loader, device, num_epochs, lr, wandb_enable)
+    return main(model, backbone, dataset_name, train_loader, val_loader, train_dataset, val_dataset, device, num_epochs, lr, wandb_enable)
 
 
     
