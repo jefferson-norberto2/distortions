@@ -206,13 +206,21 @@ class FilesManipulation:
 
 if __name__ == "__main__":
     manipulator = FilesManipulation()
-    # manipulator.flip_images(
-    #     folder_path="/root/Documents/dev/Datasets/NOISE_512/val/src",
-    #     types=['horizontal', 'vertical', 'both']
-    # )
-    manipulator.crop_images(
-        input_folder="/root/Documents/dev/Datasets/NOISE_512/train/src",
-        output_folder="/root/Documents/dev/Datasets/NOISE_512/train/cropped",
-        crop_size=256,
-        positions=['center', 'top_left', 'top_right', 'bottom_left', 'bottom_right']
-    )
+    
+    folders = []
+    
+    for folder in folders:
+        manipulator.flip_images(
+            folder_path=f"/home/jmn/dev/Datasets/ECSIQ/val/{folder}",
+            types=['horizontal', 'vertical', 'both']
+        )
+    
+    folders = ['blur', 'contrast', 'jpeg', 'jpeg2000', 'fnoise', 'awgn', 'src']
+    
+    for folder in folders:
+        manipulator.crop_images(
+            input_folder=f"/home/jmn/dev/Datasets/ECSIQ/val/{folder}",
+            output_folder=f"/home/jmn/dev/Datasets/ECSIQ_300/val/{folder}",
+            crop_size=300,
+            positions=['center', 'top_left', 'top_right', 'bottom_left', 'bottom_right']
+        )
