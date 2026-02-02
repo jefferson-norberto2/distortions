@@ -211,16 +211,16 @@ if __name__ == "__main__":
     
     for folder in folders:
         manipulator.flip_images(
-            folder_path=f"/home/jmn/dev/Datasets/ECSIQ/val/{folder}",
+            folder_path=f"/home/jmn/dev/Datasets/ELIVE/{folder}",
             types=['horizontal', 'vertical', 'both']
         )
     
-    folders = ['blur', 'contrast', 'jpeg', 'jpeg2000', 'fnoise', 'awgn', 'src']
+    folders = ['jpeg2000', 'awgn', 'src']
     
     for folder in folders:
         manipulator.crop_images(
-            input_folder=f"/home/jmn/dev/Datasets/ECSIQ/val/{folder}",
-            output_folder=f"/home/jmn/dev/Datasets/ECSIQ_300/val/{folder}",
+            input_folder=f"/home/jmn/dev/Datasets/ELIVE/{folder}",
+            output_folder=f"/home/jmn/dev/Datasets/ELIVE_300/{folder}",
             crop_size=300,
             positions=['center', 'top_left', 'top_right', 'bottom_left', 'bottom_right']
         )

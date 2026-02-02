@@ -97,8 +97,8 @@ def train_model(
 ):
     train_loader, val_loader = get_train_dataloaders(
         data_dir=data_dir, 
-        train_split=train_split, 
-        batch_size=batch_size
+        batch_size=batch_size,
+        im_size=300,
     )
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
