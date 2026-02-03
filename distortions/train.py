@@ -35,7 +35,7 @@ def main(model, backbone, dataset_name, train_loader, val_loader, train_dataset,
             "train_size": len(train_loader.dataset),
             "val_size": len(val_loader.dataset),
             "num_classes": len(train_dataset.classes),
-            "classes": train_dataset.classes
+            "classes": train_dataset.classes,
         },
         name=f"training_{backbone}"
     )
@@ -43,8 +43,7 @@ def main(model, backbone, dataset_name, train_loader, val_loader, train_dataset,
     base_dir = "runs/train"
     os.makedirs(base_dir, exist_ok=True)
     
-    count = 0    
-    count = len([count+1 for folder in os.listdir("runs/train") if folder.startswith(backbone)])
+    count = sum(1 for folder in os.listdir("runs/train") if folder.startswith(backbone)) 
             
     save_dir = f"{base_dir}/{backbone}_{count+1}"
     os.makedirs(save_dir, exist_ok=True)

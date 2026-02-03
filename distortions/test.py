@@ -1,7 +1,6 @@
 import matplotlib.pyplot as plt
 import torch
 import wandb 
-import time
 import os
 
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
@@ -31,7 +30,7 @@ def test_model(folder_path="/home/jmn/host/dev/Datasets/IQA/ELIVE/",
     else:
         model = CustomResNet(num_classes=len(dataset.classes), pre_treined=False, backbone=name_model)
         
-    model.load_state_dict(torch.load(weight_path, map_location=device))
+    model.load_state_dict(torch.load(weight_path, map_location=device), weights_only=True)
     model = model.to(device)
     model.eval()
 
@@ -45,8 +44,12 @@ def test_model(folder_path="/home/jmn/host/dev/Datasets/IQA/ELIVE/",
     cm = confusion_matrix(all_preds, all_labels)
     disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=class_names)
 
-    time_stamp = time.strftime("%Y%m%d-%H%M%S")
-    save_dir = f"runs/test/{time_stamp}"
+    base_dir = "runs/test"
+    os.makedirs(base_dir, exist_ok=True)
+    
+    count = sum(1 for folder in os.listdir(base_dir) if folder.startswith(name_model))
+            
+    save_dir = f"{base_dir}/{name_model}_{count+1}"
     os.makedirs(save_dir, exist_ok=True)
 
     disp.plot(cmap=plt.cm.Blues)

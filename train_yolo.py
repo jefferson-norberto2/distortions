@@ -3,13 +3,12 @@ from ultralytics import YOLO
 def augment(image):
     return image
 
-# Carrega um modelo pré-treinado para classificação (o 'n' é de 'nano', mais rápido)
-model = YOLO('yolo26n-cls.pt') 
+model = YOLO('yolo26m-cls.pt') 
 
 results = model.train(
-    data='/root/Documents/dev/Datasets/NOISE_256_v2', 
-    epochs=25, 
-    imgsz=256, 
+    data='/home/jmn/dev/Datasets/ECSIQ_320/', 
+    epochs=10, 
+    imgsz=320, 
     device=0, 
     batch=64,
     # --- Desativando Augmentations ---

@@ -207,20 +207,21 @@ class FilesManipulation:
 if __name__ == "__main__":
     manipulator = FilesManipulation()
     
-    folders = []
+    folders = ['blur', 'awgn', 'jpeg', 'jpeg2000']
+    base_dir = '/home/jmn/dev/Datasets/NOISE/train'
     
-    for folder in folders:
-        manipulator.flip_images(
-            folder_path=f"/home/jmn/dev/Datasets/ELIVE/{folder}",
-            types=['horizontal', 'vertical', 'both']
-        )
+    # for folder in folders:
+    #     manipulator.flip_images(
+    #         folder_path=f"{base_dir}/train/{folder}",
+    #         types=['horizontal', 'vertical', 'both']
+    #     )
     
-    folders = ['jpeg2000', 'awgn', 'src']
+    folders = ['blur', 'awgn', 'jpeg', 'jpeg2000']
     
     for folder in folders:
         manipulator.crop_images(
-            input_folder=f"/home/jmn/dev/Datasets/ELIVE/{folder}",
-            output_folder=f"/home/jmn/dev/Datasets/ELIVE_300/{folder}",
-            crop_size=300,
+            input_folder=f"{base_dir}/{folder}",
+            output_folder=f"{base_dir}_320/{folder}",
+            crop_size=320,
             positions=['center', 'top_left', 'top_right', 'bottom_left', 'bottom_right']
         )

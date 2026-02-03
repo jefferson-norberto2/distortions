@@ -15,11 +15,12 @@ if __name__ == '__main__':
     # Train and test model
     model = 'inception_v3'
     wandb_enable = False
-    best = train_model(backbone=model, data_dir='/home/jmn/dev/Datasets/ECSIQ_300/', num_epochs=20, batch_size=24, lr=0.0001, wandb_enable=wandb_enable)
-    # test_model(
-    #     weight_path='/home/jmn/dev/python/distortions/runs/train/20260202-151932/best_distortion_11.pth', 
-    #     name_model=model, 
-    #     folder_path='/home/jmn/dev/Datasets/ELIVE_300', 
-    #     wandb_enable=wandb_enable)
+    best = train_model(backbone=model, data_dir='/home/jmn/dev/Datasets/ECSIQ_300/', num_epochs=5, batch_size=24, lr=0.0001, wandb_enable=wandb_enable)
+    
+    test_model(
+        weight_path=best, 
+        name_model=model, 
+        folder_path='/home/jmn/dev/Datasets/ELIVE_300', 
+        wandb_enable=wandb_enable)
 
 
