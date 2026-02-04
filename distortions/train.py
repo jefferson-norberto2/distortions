@@ -8,6 +8,7 @@ import os
 import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 
+from distortions.model.custom_mobilenet import CustomMobileNetV3
 from distortions.model.custom_resnet import CustomResNet
 from distortions.model.custom_inception import CustomInception
 from distortions.utils.functions import train_epoch, validate_epoch
@@ -117,6 +118,12 @@ def train_model(
             num_classes=len(train_dataset.classes),
             pre_treined=True,
             training=True
+        ).to(device)
+    elif backbone.lower().startswith("mobilenet_v3_large"):
+        model = CustomMobileNetV3(
+            num_classes=len(train_dataset.classes),
+            pre_trained=True,
+            backbone=backbone
         ).to(device)
     else:
         model = CustomResNet(

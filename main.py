@@ -13,14 +13,14 @@ if __name__ == '__main__':
     # download.download_file(URL_CSIQ, './data/ECSIQ.zip', unzip=True)
 
     # Train and test model
-    model = 'inception_v3'
+    model = 'mobilenet_v3_large'
     wandb_enable = False
-    best = train_model(backbone=model, data_dir='/home/jmn/dev/Datasets/ECSIQ_320/', num_epochs=10, batch_size=32, lr=0.0001, wandb_enable=wandb_enable, img_size=128)
+    best = train_model(backbone=model, data_dir='/home/jmn/dev/Datasets/ECSIQ_512/', num_epochs=10, batch_size=16, lr=0.0001, wandb_enable=wandb_enable, img_size=512)
     
     test_model(
         weight_path=best, 
         name_model=model, 
-        folder_path='/home/jmn/dev/Datasets/ELIVE_320', 
+        folder_path='/home/jmn/dev/Datasets/LIVE_512', 
         wandb_enable=wandb_enable)
 
 

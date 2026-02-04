@@ -211,21 +211,21 @@ class FilesManipulation:
 if __name__ == "__main__":
     manipulator = FilesManipulation()
     
-    base_dir = '/home/jmn/dev/Datasets/LIVE/'
-    # folders = ['blur', 'awgn', 'jpeg', 'jpeg2000']
-    
-    # for folder in folders:
-    #     manipulator.flip_images(
-    #         folder_path=f"{base_dir}/{folder}",
-    #         types=['horizontal', 'vertical', 'both']
-    #     )
-    
-    folders = ['jpeg2000']
+    base_dir = '/home/jmn/dev/Datasets/NOISE/val (copy)/'
+    folders = ['blur', 'awgn', 'jpeg', 'jpeg2000']
     
     for folder in folders:
-        manipulator.crop_images(
-            input_folder=f"{base_dir}/{folder}",
-            output_folder=f"{base_dir}_512/{folder}",
-            crop_size=512,
-            positions=['center']
+        manipulator.flip_images(
+            folder_path=f"{base_dir}/{folder}",
+            types=['horizontal', 'vertical', 'both']
         )
+    
+    # folders = ['jpeg2000']
+    
+    # for folder in folders:
+    #     manipulator.crop_images(
+    #         input_folder=f"{base_dir}/{folder}",
+    #         output_folder=f"{base_dir}_512/{folder}",
+    #         crop_size=512,
+    #         positions=['center']
+    #     )
