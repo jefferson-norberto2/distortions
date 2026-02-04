@@ -106,7 +106,7 @@ def _train_val_loaders_from_split(data_dir: str, train_split: float, transform: 
  
 	return train_loader, val_loader, train_dataset, val_dataset
 
-def get_train_dataloaders(data_dir: str, batch_size: int, im_size: int) -> tuple[DataLoader, DataLoader, datasets.ImageFolder, datasets.ImageFolder]:
+def get_train_dataloaders(data_dir: str, batch_size: int, img_size: int) -> tuple[DataLoader, DataLoader, datasets.ImageFolder, datasets.ImageFolder]:
 	'''
 	Creates training and validation dataloaders from the dataset located at data_dir.
 	
@@ -120,7 +120,7 @@ def get_train_dataloaders(data_dir: str, batch_size: int, im_size: int) -> tuple
 	Returns:
 		tuple[DataLoader, DataLoader]: Training and validation dataloaders.
 	'''
-	transform = _get_transform(im_size)
+	transform = _get_transform(img_size)
 	
 	train_loader, val_loader, train_dataset, val_dataset = None, None, None, None
  

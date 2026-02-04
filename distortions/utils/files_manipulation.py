@@ -111,8 +111,10 @@ class FilesManipulation:
         coords_map = {
             'top_left':     (0, 0, w_crop, h_crop),
             'top_right':    (w_img - w_crop, 0, w_img, h_crop),
+            'top_center':   ((w_img - w_crop) // 2, 0, (w_img - w_crop) // 2 + w_crop, h_crop),
             'bottom_left':  (0, h_img - h_crop, w_crop, h_img),
             'bottom_right': (w_img - w_crop, h_img - h_crop, w_img, h_img),
+            'bottom_center':( (w_img - w_crop) // 2, h_img - h_crop, (w_img - w_crop) // 2 + w_crop, h_img),
             'center':       (
                 (w_img - w_crop) // 2,
                 (h_img - h_crop) // 2,
@@ -143,8 +145,10 @@ class FilesManipulation:
             positions=[
                 'center', 
                 'top_left', 
-                'top_right', 
+                'top_right',
+                'top_center', 
                 'bottom_left', 
+                'bottom_center',
                 'bottom_right'
                 ]
             ) -> None:
@@ -207,21 +211,21 @@ class FilesManipulation:
 if __name__ == "__main__":
     manipulator = FilesManipulation()
     
-    folders = ['blur', 'awgn', 'jpeg', 'jpeg2000']
-    base_dir = '/home/jmn/dev/Datasets/NOISE/train'
+    base_dir = '/home/jmn/dev/Datasets/LIVE/'
+    # folders = ['blur', 'awgn', 'jpeg', 'jpeg2000']
     
     # for folder in folders:
     #     manipulator.flip_images(
-    #         folder_path=f"{base_dir}/train/{folder}",
+    #         folder_path=f"{base_dir}/{folder}",
     #         types=['horizontal', 'vertical', 'both']
     #     )
     
-    folders = ['blur', 'awgn', 'jpeg', 'jpeg2000']
+    folders = ['jpeg2000']
     
     for folder in folders:
         manipulator.crop_images(
             input_folder=f"{base_dir}/{folder}",
-            output_folder=f"{base_dir}_320/{folder}",
-            crop_size=320,
-            positions=['center', 'top_left', 'top_right', 'bottom_left', 'bottom_right']
+            output_folder=f"{base_dir}_512/{folder}",
+            crop_size=512,
+            positions=['center']
         )

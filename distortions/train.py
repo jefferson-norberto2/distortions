@@ -97,7 +97,7 @@ def main(model, backbone, dataset_name, train_loader, val_loader, train_dataset,
 def train_model(
     backbone='resnet_50',
     data_dir="/home/jmn/host/dev/Datasets/IQA/ECSIQ/",
-    train_split=0.7,
+    img_size=320,
     batch_size=32,
     lr=1e-4,
     num_epochs=10,
@@ -106,7 +106,7 @@ def train_model(
     train_loader, val_loader, train_dataset, val_dataset = get_train_dataloaders(
         data_dir=data_dir, 
         batch_size=batch_size,
-        im_size=300,
+        img_size=img_size,
     )
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

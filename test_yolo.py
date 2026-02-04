@@ -29,7 +29,7 @@ model = YOLO('runs/classify/train6/weights/best.pt')
 # Definições
 classes = {0: 'awgn', 1: 'blur', 2: 'jpeg', 3: 'jpeg2000'}
 class_names = [classes[i] for i in range(len(classes))] # [0, 1, 2, 3] -> nomes
-base_path = '/home/jmn/dev/Datasets/ELIVE_320/'
+base_path = '/home/jmn/dev/Datasets/LIVE_512/'
 
 y_true = []
 y_pred = []
@@ -59,7 +59,7 @@ for key, value in classes.items():
         results = model.predict(
             source=img_path,
             device=0,
-            imgsz=320, 
+            imgsz=512, 
             save=False,
             verbose=False,
         )
