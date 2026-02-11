@@ -12,6 +12,7 @@ docker run -it -d \
     --network host \
     --shm-size=32g \
     --mount type=bind,source=${SCRIPT_DIR},target=${SCRIPT_DIR} \
+    --mount type=bind,source=${HOME}/Documents/Datasets/classification,target=${SCRIPT_DIR}/Datasets \
     --workdir=${SCRIPT_DIR} \
     distortions:latest bash
 
