@@ -10,6 +10,7 @@ docker run -it -d \
     --name distortions_jmn \
     --gpus all \
     --network host \
+    --shm-size=32g \
     --mount type=bind,source=${SCRIPT_DIR},target=${SCRIPT_DIR} \
     --workdir=${SCRIPT_DIR} \
     distortions:latest bash
