@@ -13,6 +13,7 @@ from distortions.model.custom_resnet import CustomResNet
 from distortions.model.custom_inception import CustomInception
 from distortions.utils.functions import train_epoch, validate_epoch
 from distortions.dataset.dataloaders import get_train_dataloaders  
+from distortions.model.distortion_hunter import DistortionHunter
 
 def main(model, backbone, dataset_name, train_loader, val_loader, train_dataset, val_dataset, device, num_epochs, lr, wandb_enable) -> str:
     best_acc = 0.0
@@ -119,11 +120,15 @@ def train_model(
             pre_treined=True,
             training=True
         ).to(device)
-    elif backbone.lower().startswith("mobilenet_v3_large"):
+    elif backbone.lower().startswith("mobilenet_v3"):
         model = CustomMobileNetV3(
             num_classes=len(train_dataset.classes),
             pre_trained=True,
             backbone=backbone
+        ).to(device)
+    elif backbone.lower().startswith("distortion_hunter"):
+        model = DistortionHunter(
+            num_classes=len(train_dataset.classes)
         ).to(device)
     else:
         model = CustomResNet(

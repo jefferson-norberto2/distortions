@@ -8,9 +8,9 @@ model = YOLO('yolo26m-cls.pt')
 results = model.train(
     data='/home/jmn/dev/Datasets/ECSIQ_512/', 
     epochs=20, 
-    imgsz=512, 
+    imgsz=720, 
     device=0, 
-    batch=16,
+    batch=8,
     # --- Desativando Augmentations ---
     hsv_h=0.0,      # Ajuste de matiz (hue)
     hsv_s=0.0,      # Ajuste de saturação

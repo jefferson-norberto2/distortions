@@ -10,6 +10,8 @@ from distortions.model.custom_resnet import CustomResNet
 from distortions.model.custom_inception import CustomInception
 from distortions.utils.functions import validate_epoch  
 from distortions.model.custom_mobilenet import CustomMobileNetV3
+from distortions.model.distortion_hunter import DistortionHunter
+
 
 def test_model(folder_path="/home/jmn/host/dev/Datasets/IQA/ELIVE/",
                weight_path="distortions_10_resnet50_b16_lr1e-4.pth", 
@@ -28,8 +30,10 @@ def test_model(folder_path="/home/jmn/host/dev/Datasets/IQA/ELIVE/",
     
     if name_model == 'inception_v3':
         model = CustomInception(num_classes=len(dataset.classes), pre_treined=False, training=False)
-    elif name_model.startswith("mobilenet_v3_large"):
+    elif name_model.startswith("mobilenet_v3"):
         model = CustomMobileNetV3(num_classes=len(dataset.classes), pre_trained=False, backbone=name_model)
+    elif name_model.startswith("distortion_hunter"):
+        model = DistortionHunter(num_classes=len(dataset.classes))
     else:
         model = CustomResNet(num_classes=len(dataset.classes), pre_treined=False, backbone=name_model)
         

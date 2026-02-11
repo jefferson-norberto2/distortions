@@ -16,7 +16,13 @@ class CustomResNet(Module):
         self.backbone.fc = Linear(num_ftrs, num_classes)
     
     def get_backbone_and_weights(self, name_model: str, pre_trained: bool) -> Module:
-        if name_model == 'resnet_50':
+        if name_model == 'resnet_18':
+            weights = models.ResNet18_Weights.IMAGENET1K_V1 if pre_trained else None
+            back = models.resnet18(weights=weights)
+        elif name_model == 'resnet_34':
+            weights = models.ResNet34_Weights.IMAGENET1K_V1 if pre_trained else None
+            back = models.resnet34(weights=weights)
+        elif name_model == 'resnet_50':
             weights = models.ResNet50_Weights.IMAGENET1K_V2 if pre_trained else None
             back = models.resnet50(weights=weights)
         elif name_model == 'resnet_101':

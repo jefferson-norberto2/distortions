@@ -176,11 +176,15 @@ if __name__ == "__main__":
         generator = DistortionGenerator() 
 
         folder_path = '/home/jmn/dev/Datasets/NOISE/val/src'
-        files = [file for file in os.listdir(folder_path) if file.endswith('.png')]
+        files = [file for file in os.listdir(folder_path)]
 
         for file in tqdm(files):
             image_path = os.path.join(folder_path, file)
-            generator.change_image(image_path)
+            try:
+                generator.change_image(image_path)
+            except Exception as e:
+                print(f"Erro ao carregar imagem {file}: {e}")
+                continue
             
             # 1. Blur
             sigma_value = np.random.uniform(1.0, 3.0)
@@ -202,15 +206,15 @@ if __name__ == "__main__":
             res_jp2 = generator.add_jpeg2000_compression(compression_ratio=compression_ratio) # Ratio alto = menor qualidade
             generator.save_output(res_jp2, "jpeg2000", compression_ratio)
 
-            # # 5. Contrast Decrement
-            # alpha_value = np.random.uniform(0.1, 0.7)
-            # res_contrast = generator.change_contrast(alpha=alpha_value) # Valor maior reduz menos o contraste
-            # generator.save_output(res_contrast, "contrast", f'{alpha_value:.2f}')
+            # 5. Contrast Decrement
+            alpha_value = np.random.uniform(0.1, 0.7)
+            res_contrast = generator.change_contrast(alpha=alpha_value) # Valor maior reduz menos o contraste
+            generator.save_output(res_contrast, "contrast", f'{alpha_value:.2f}')
             
-            # # 6. Pink Noise (Específico da CSIQ)
-            # intensity_value = np.random.uniform(0.09, 0.2)
-            # res_pink = generator.add_pink_noise(intensity=intensity_value)
-            # generator.save_output(res_pink, "pink_noise", f'{intensity_value:.4f}')
+            # 6. Pink Noise (Específico da CSIQ)
+            intensity_value = np.random.uniform(0.09, 0.2)
+            res_pink = generator.add_pink_noise(intensity=intensity_value)
+            generator.save_output(res_pink, "pink_noise", f'{intensity_value:.4f}')
 
     except Exception as e:
         print(e)

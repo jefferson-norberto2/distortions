@@ -13,9 +13,14 @@ if __name__ == '__main__':
     # download.download_file(URL_CSIQ, './data/ECSIQ.zip', unzip=True)
 
     # Train and test model
-    model = 'mobilenet_v3_large'
+    model = 'resnet_18'  
     wandb_enable = False
-    best = train_model(backbone=model, data_dir='/home/jmn/dev/Datasets/ECSIQ_512/', num_epochs=10, batch_size=16, lr=0.0001, wandb_enable=wandb_enable, img_size=512)
+    best = train_model(backbone=model, 
+                       data_dir='/home/jmn/dev/Datasets/ECSIQ_512/', 
+                       num_epochs=10, 
+                       batch_size=16, 
+                       lr=0.0001, 
+                       wandb_enable=wandb_enable, img_size=512)
     
     test_model(
         weight_path=best, 

@@ -2,26 +2,7 @@ from ultralytics import YOLO
 import os
 import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
-import cv2
 from distortions.utils.bar_progress import BarProgress
-
-def preprocess_to_320(image_path):
-    img = cv2.imread(image_path)
-    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-
-    # 2️⃣ Padding até 320x320
-    pad_total = 320 - 300
-    pad1 = pad_total // 2
-    pad2 = pad_total - pad1
-
-    img = cv2.copyMakeBorder(
-        img,
-        pad1, pad2,  # top, bottom
-        pad1, pad2,  # left, right
-        borderType=cv2.BORDER_REFLECT_101
-    )
-
-    return img
 
 # Carregar modelo
 model = YOLO('runs/classify/train6/weights/best.pt')

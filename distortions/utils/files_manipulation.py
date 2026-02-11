@@ -214,11 +214,11 @@ if __name__ == "__main__":
     base_dir = '/home/jmn/dev/Datasets/NOISE/val (copy)/'
     folders = ['blur', 'awgn', 'jpeg', 'jpeg2000']
     
-    for folder in folders:
-        manipulator.flip_images(
-            folder_path=f"{base_dir}/{folder}",
-            types=['horizontal', 'vertical', 'both']
-        )
+    # for folder in folders:
+    #     manipulator.flip_images(
+    #         folder_path=f"{base_dir}/{folder}",
+    #         types=['horizontal', 'vertical', 'both']
+    #     )
     
     # folders = ['jpeg2000']
     
