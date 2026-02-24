@@ -120,7 +120,7 @@ class FilesManipulation:
                         
                         fliped_path = os.path.join(folder_path, fliped_name)
                         
-                        fliped_image.save(fliped_path)
+                        fliped_image.save(fliped_path, quality=100, subsampling=0)
 
     def crop_single_image(
             self, 
@@ -356,28 +356,28 @@ class FilesManipulation:
 if __name__ == "__main__":
     manipulator = FilesManipulation()
     
-    base_dir = '/home/jmn/dev/Datasets/Noise/train'
+    base_dir = '/home/jmn/dev/Datasets/LIVE_512/'
     folders = ['src']
     
-    # for folder in folders:
-    #     manipulator.flip_images(
-    #         folder_path=f"{base_dir}/{folder}",
-    #         types=['horizontal', 'vertical', 'both', '45_degree', '135_degree']
-    #     )
+    for folder in folders:
+        manipulator.flip_images(
+            folder_path=f"{base_dir}/{folder}",
+            types=['horizontal', 'vertical', 'both']
+        )
     
     # folders = ['jpeg2000']
     
     # for folder in folders:
     #     manipulator.crop_images(
     #         input_folder=f"{base_dir}/{folder}",
-    #         output_folder=f"/home/jmn/dev/Datasets/Noise/val/src",
-    #         crop_size=1920,
+    #         output_folder=f"/home/jmn/dev/Datasets/LIVE_512/src",
+    #         crop_size=512,
     #         positions=['center'],
     #     )
     
-    for folder in folders:
-        manipulator.resize_images(
-            folder_path=f"{base_dir}/{folder}",
-            output_folder=f"/home/jmn/dev/Datasets/Noise/train/src2",
-            new_size=(512, 512)
-        )
+    # for folder in folders:
+    #     manipulator.resize_images(
+    #         folder_path=f"{base_dir}/{folder}",
+    #         output_folder=f"{base_dir}/{folder}",
+    #         new_size=(512, 512)
+    #     )

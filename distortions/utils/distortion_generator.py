@@ -25,6 +25,7 @@ class DistortionGenerator:
         if self.img_uint8 is None:
             raise ValueError(f"Image not found at path: {new_image_path}.")
         
+        # Converte para float32 no intervalo [0, 1]
         self.img = self.img_uint8.astype(np.float32) / 255.0
         self.height, self.width, self.channels = self.img.shape
         self.img_name = self._get_image_name(new_image_path)
@@ -40,8 +41,8 @@ class DistortionGenerator:
 
     def save_output(self, distorted_img, distortion_name, level):
         """Saves the resulting image converting back to uint8."""
-        # Clip to ensure range [0,1] and convert to [0,255]
         self._check_image_loaded()
+        # Garante que os valores fiquem entre 0 e 1 antes de converter
         img_clipped = np.clip(distorted_img, 0, 1)
         img_out = (img_clipped * 255).astype(np.uint8)
         save_path = f'{self.root_path}/{distortion_name}'
@@ -49,120 +50,103 @@ class DistortionGenerator:
         file_path = f"{save_path}/dist_{level}_{self.img_name}.png"
         cv2.imwrite(file_path, img_out)
     
-    # 1. Gaussian Blur
-    def add_gaussian_blur(self, kernel_size=(15, 15), sigma=5):
+    # 1. Gaussian Blur (Kernel e Sigma dinâmicos)
+    def add_gaussian_blur(self, sigma=2.0, force_kernel=None):
         """
-        Applies a Gaussian filter.
-        Sigma controls the blur intensity.
+        Applies a Gaussian filter with dynamic kernels.
+        Se force_kernel for None, o OpenCV calcula o kernel ideal baseado no sigma.
         """
-        # The paper mentions "Gaussian blurring" as distortion in LIVE and CSIQ
         self._check_image_loaded()
+        
+        if force_kernel is not None:
+            # Garante que o kernel seja ímpar
+            k = int(force_kernel)
+            k = k if k % 2 != 0 else k + 1
+            kernel_size = (k, k)
+        else:
+            # (0,0) faz o cv2 calcular o tamanho do kernel automaticamente usando a fórmula do sigma
+            kernel_size = (0, 0)
+            
         blurred = cv2.GaussianBlur(self.img, kernel_size, sigma)
         return blurred
 
-    # 2. Additive White Gaussian Noise (White Noise) 
-    def add_white_noise(self, variance=0.01):
+    # 2. Poisson-Gaussian Noise (Signal-Dependent Noise)
+    def add_poisson_gaussian_noise(self, shot_noise=0.01, read_noise=0.001):
         """
-        Adds Gaussian white noise.
-        Variance controls the noise intensity.
+        Simula ruído realista de sensor.
+        shot_noise: ruído dependente dos fótons (afeta mais as áreas claras)
+        read_noise: ruído eletrônico base (afeta a imagem toda, visível nas sombras)
         """
         self._check_image_loaded()
-        noise = np.random.normal(0, np.sqrt(variance), self.img.shape)
+        
+        # Variância total = (intensidade * shot_noise) + read_noise
+        # Criamos um mapa de desvio padrão (sigma) para cada pixel
+        variance_map = (self.img * shot_noise) + read_noise
+        sigma_map = np.sqrt(np.clip(variance_map, 0, None))
+        
+        # Gera ruído normal padronizado e multiplica pelo mapa de sigma
+        noise = np.random.normal(0, 1, self.img.shape) * sigma_map
+        
         noisy_img = self.img + noise
         return noisy_img
 
-    # 3. JPEG Compression 
+    # 3. JPEG Compression
     def add_jpeg_compression(self, quality=10):
-        """
-        Simulates JPEG compression artifacts.
-        Quality ranges from 1 (worst) to 95 (best).
-        """
         self._check_image_loaded()
-        pil_img = Image.fromarray((self.img * 255).astype(np.uint8))
+        pil_img = Image.fromarray(np.clip(self.img * 255, 0, 255).astype(np.uint8))
         buffer = io.BytesIO()
-        # Saves to buffer with desired quality
         pil_img.save(buffer, "JPEG", quality=quality)
         buffer.seek(0)
-        # Reads back
         jpeg_img = Image.open(buffer)
-        # Converts back to cv2 format (BGR) and float
         img_np = np.array(jpeg_img)
-        # Pillow is RGB, OpenCV is BGR if not converted, but assuming input cv2:
-        # If the original input was BGR (cv2 default), Pillow read as RGB incorrectly if not converted.
-        # Safe adjustment: Maintain channel consistency.
         return img_np.astype(np.float32) / 255.0
 
-    # 4. JPEG-2000 Compression 
+    # 4. JPEG-2000 Compression
     def add_jpeg2000_compression(self, compression_ratio=20):
-        """
-        Simula compressão JPEG 2000. Requer suporte a escrita .jp2 no OpenCV.
-        Alternativa: Usar imageio se o cv2 falhar.
-        """
         self._check_image_loaded()
-        img_u8 = (self.img * 255).astype(np.uint8)
-        # Tenta salvar temporariamente como jp2
-        temp_filename = "temp_dist.jp2"
+        img_u8 = np.clip(self.img * 255, 0, 255).astype(np.uint8)
+        temp_filename = f"temp_dist_{np.random.randint(1000,9999)}.jp2" # Evita conflito de arquivos
         try:
-            # A compressão no cv2 para JPG2000 é controlada por CV_IMWRITE_JPEG2000_COMPRESSION_X1000
-            # Valor alto = menor qualidade (mais compressão)
             cv2.imwrite(temp_filename, img_u8, [cv2.IMWRITE_JPEG2000_COMPRESSION_X1000, compression_ratio * 10])
             jp2_img = cv2.imread(temp_filename)
             os.remove(temp_filename)
-            return jp2_img.astype(np.float32) / 255.0
+            if jp2_img is not None:
+                return jp2_img.astype(np.float32) / 255.0
+            return self.img
         except Exception as e:
-            print(f"Erro ao gerar JPEG2000 (verifique drivers OpenCV): {e}")
+            if os.path.exists(temp_filename):
+                os.remove(temp_filename)
             return self.img
 
-    # 5. Global Contrast Decrements 
+    # 5. Global Contrast Decrements
     def change_contrast(self, alpha=0.5):
-        """
-        Reduz o contraste global.
-        Alpha < 1.0 reduz o contraste (aproxima do cinza médio).
-        """
-        # Fórmula: pixel = alpha * (pixel - meio) + meio
-        # Assume meio como 0.5 para imagens float
         self._check_image_loaded()
         gray_mean = 0.5
         contrast_img = alpha * (self.img - gray_mean) + gray_mean
         return contrast_img
 
-    # 6. Additive Pink Gaussian Noise 
-    def add_pink_noise(self, intensity=0.05):
-        """
-        Gera ruído rosa (1/f) no domínio da frequência e adiciona à imagem.
-        """
+    # 6. Additive Pink Gaussian Noise (com variação espacial leve)
+    def add_pink_noise(self, intensity=0.05, spatial_scale=1.0):
         self._check_image_loaded()
         def pink_noise_2d(shape):
             rows, cols = shape
-            # Cria grid de frequências
             u = np.fft.fftfreq(rows)
             v = np.fft.fftfreq(cols)
             u_grid, v_grid = np.meshgrid(u, v, indexing='ij')
             
-            # Calcula frequência radial f = sqrt(u^2 + v^2)
             f = np.sqrt(u_grid**2 + v_grid**2)
-            
-            # Evita divisão por zero no componente DC
             f[0, 0] = 1.0 
             
-            # Espectro do ruído rosa: 1 / f (para amplitude, que é sqrt(PSD))
-            # Ajuste: O artigo fala "Pink Gaussian". Tipicamente isso é 1/f.
-            scale = 1.0 / (f + 1e-5)
+            # spatial_scale permite alterar a "textura" do ruído rosa
+            scale = 1.0 / (f**spatial_scale + 1e-5)
             
-            # Gera ruído branco no domínio da frequência (fase aleatória)
             white_noise_spec = np.fft.fft2(np.random.normal(0, 1, shape))
-            
-            # Aplica o filtro rosa
             pink_spec = white_noise_spec * scale
-            
-            # Volta para o domínio espacial
             pink_noise = np.fft.ifft2(pink_spec).real
             
-            # Normaliza para média 0 e std 1
-            pink_noise = (pink_noise - np.mean(pink_noise)) / np.std(pink_noise)
+            pink_noise = (pink_noise - np.mean(pink_noise)) / (np.std(pink_noise) + 1e-8)
             return pink_noise
 
-        # Gera ruído rosa para cada canal separadamente
         noise_layer = np.zeros_like(self.img)
         for ch in range(self.channels):
             noise_layer[:,:,ch] = pink_noise_2d((self.height, self.width))
@@ -175,8 +159,13 @@ if __name__ == "__main__":
     try:
         generator = DistortionGenerator() 
 
-        folder_path = '/home/jmn/dev/Datasets/Distortions/train/src'
-        files = [file for file in os.listdir(folder_path)]
+        folder_path = '/home/jmn/dev/Datasets/LIVE_512/src'
+        # Adicionei uma checagem caso o diretório não exista na hora de rodar
+        if not os.path.exists(folder_path):
+            print(f"Diretório não encontrado: {folder_path}")
+            files = []
+        else:
+            files = [file for file in os.listdir(folder_path) if file.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp'))]
 
         for file in tqdm(files):
             image_path = os.path.join(folder_path, file)
@@ -186,35 +175,40 @@ if __name__ == "__main__":
                 print(f"Erro ao carregar imagem {file}: {e}")
                 continue
             
-            # 1. Blur
-            sigma_value = np.random.uniform(1.0, 3.0)
-            res_blur = generator.add_gaussian_blur(sigma=sigma_value)
-            generator.save_output(res_blur, "blur", f'{sigma_value:.2f}')
+            # # 1. Blur Dinâmico
+            # sigma_value = np.random.uniform(0.5, 4.0)
+            # # 50% de chance de deixar o cv2 calcular o kernel ideal, 50% de chance de forçar um kernel estranho (ex: kernel pequeno com sigma alto)
+            # k_force = np.random.choice([None, np.random.randint(3, 15)]) 
+            # res_blur = generator.add_gaussian_blur(sigma=sigma_value, force_kernel=k_force)
+            # generator.save_output(res_blur, "blur", f's{sigma_value:.2f}_k{k_force}')
 
-            # 2. White Noise
-            varicance_value = np.random.uniform(0.005, 0.09)
-            res_wn = generator.add_white_noise(variance=varicance_value)
-            generator.save_output(res_wn, "awgn", f'{varicance_value:.4f}')
+            # # 2. Poisson-Gaussian Noise (Ruído Realista)
+            # # shot_noise domina altas luzes, read_noise domina baixas luzes
+            # shot_v = np.random.uniform(0.005, 0.05)
+            # read_v = np.random.uniform(0.0001, 0.005)
+            # res_pgn = generator.add_poisson_gaussian_noise(shot_noise=shot_v, read_noise=read_v)
+            # generator.save_output(res_pgn, "awgn", f'sh{shot_v:.3f}_rd{read_v:.4f}')
 
-            # 3. JPEG
-            quality_value = np.random.randint(5, 25)
-            res_jpg = generator.add_jpeg_compression(quality=quality_value) # Qualidade baixa = mais artefatos
-            generator.save_output(res_jpg, "jpeg", quality_value)
+            # # 3. JPEG
+            # quality_value = np.random.randint(5, 30)
+            # res_jpg = generator.add_jpeg_compression(quality=quality_value)
+            # generator.save_output(res_jpg, "jpeg", quality_value)
 
-            # 4. JPEG 2000
-            compression_ratio = np.random.randint(1, 15)
-            res_jp2 = generator.add_jpeg2000_compression(compression_ratio=compression_ratio) # Ratio alto = menor qualidade
-            generator.save_output(res_jp2, "jpeg2000", compression_ratio)
+            # # 4. JPEG 2000
+            # compression_ratio = np.random.randint(1, 20)
+            # res_jp2 = generator.add_jpeg2000_compression(compression_ratio=compression_ratio)
+            # generator.save_output(res_jp2, "jpeg2000", compression_ratio)
 
             # 5. Contrast Decrement
-            alpha_value = np.random.uniform(0.1, 0.7)
-            res_contrast = generator.change_contrast(alpha=alpha_value) # Valor maior reduz menos o contraste
+            alpha_value = np.random.uniform(0.1, 0.8)
+            res_contrast = generator.change_contrast(alpha=alpha_value)
             generator.save_output(res_contrast, "contrast", f'{alpha_value:.2f}')
             
-            # 6. Pink Noise (Específico da CSIQ)
-            intensity_value = np.random.uniform(0.09, 0.2)
-            res_pink = generator.add_pink_noise(intensity=intensity_value)
-            generator.save_output(res_pink, "pink_noise", f'{intensity_value:.4f}')
+            # 6. Pink Noise (Variação na escala espacial)
+            intensity_value = np.random.uniform(0.05, 0.2)
+            spatial_scale_val = np.random.uniform(0.8, 1.5) # Altera a frequência do ruído rosa
+            res_pink = generator.add_pink_noise(intensity=intensity_value, spatial_scale=spatial_scale_val)
+            generator.save_output(res_pink, "fnoise", f'i{intensity_value:.2f}_s{spatial_scale_val:.2f}')
 
     except Exception as e:
-        print(e)
+        print(f"Erro fatal: {e}")
