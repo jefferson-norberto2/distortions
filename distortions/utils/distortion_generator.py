@@ -175,7 +175,7 @@ if __name__ == "__main__":
     try:
         generator = DistortionGenerator() 
 
-        folder_path = '/home/jmn/dev/Datasets/NOISE/val/src'
+        folder_path = '/home/jmn/dev/Datasets/Distortions/train/src'
         files = [file for file in os.listdir(folder_path)]
 
         for file in tqdm(files):
