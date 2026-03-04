@@ -16,6 +16,7 @@ dependencies = [
     "gdown (>=5.2.0,<6.0.0)",
     "opencv-python (>=4.13.0.90,<5.0.0.0)",
     "ultralytics (>=8.4.7,<9.0.0)",
+    "rich",
 ]
 
 [build-system]

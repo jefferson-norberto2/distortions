@@ -159,7 +159,7 @@ if __name__ == "__main__":
     try:
         generator = DistortionGenerator() 
 
-        folder_path = '/home/jmn/dev/Datasets/LIVE_512/src'
+        folder_path = '/home/jmn/Dev/Datasets/DIST/val/src'
         # Adicionei uma checagem caso o diretório não exista na hora de rodar
         if not os.path.exists(folder_path):
             print(f"Diretório não encontrado: {folder_path}")
@@ -175,37 +175,37 @@ if __name__ == "__main__":
                 print(f"Erro ao carregar imagem {file}: {e}")
                 continue
             
-            # # 1. Blur Dinâmico
-            # sigma_value = np.random.uniform(0.5, 4.0)
-            # # 50% de chance de deixar o cv2 calcular o kernel ideal, 50% de chance de forçar um kernel estranho (ex: kernel pequeno com sigma alto)
-            # k_force = np.random.choice([None, np.random.randint(3, 15)]) 
-            # res_blur = generator.add_gaussian_blur(sigma=sigma_value, force_kernel=k_force)
-            # generator.save_output(res_blur, "blur", f's{sigma_value:.2f}_k{k_force}')
+            # 1. Blur Dinâmico
+            sigma_value = np.random.uniform(0.2, 4.0)
+            # 50% de chance de deixar o cv2 calcular o kernel ideal, 50% de chance de forçar um kernel estranho (ex: kernel pequeno com sigma alto)
+            k_force = np.random.choice([None, np.random.randint(3, 15)]) 
+            res_blur = generator.add_gaussian_blur(sigma=sigma_value, force_kernel=k_force)
+            generator.save_output(res_blur, "blur", f's{sigma_value:.2f}_k{k_force}')
 
-            # # 2. Poisson-Gaussian Noise (Ruído Realista)
-            # # shot_noise domina altas luzes, read_noise domina baixas luzes
-            # shot_v = np.random.uniform(0.005, 0.05)
-            # read_v = np.random.uniform(0.0001, 0.005)
-            # res_pgn = generator.add_poisson_gaussian_noise(shot_noise=shot_v, read_noise=read_v)
-            # generator.save_output(res_pgn, "awgn", f'sh{shot_v:.3f}_rd{read_v:.4f}')
+            # 2. Poisson-Gaussian Noise (Ruído Realista)
+            # shot_noise domina altas luzes, read_noise domina baixas luzes
+            shot_v = np.random.uniform(0.005, 0.05)
+            read_v = np.random.uniform(0.0001, 0.005)
+            res_pgn = generator.add_poisson_gaussian_noise(shot_noise=shot_v, read_noise=read_v)
+            generator.save_output(res_pgn, "awgn", f'sh{shot_v:.3f}_rd{read_v:.4f}')
 
-            # # 3. JPEG
-            # quality_value = np.random.randint(5, 30)
-            # res_jpg = generator.add_jpeg_compression(quality=quality_value)
-            # generator.save_output(res_jpg, "jpeg", quality_value)
+            # 3. JPEG
+            quality_value = np.random.randint(5, 30)
+            res_jpg = generator.add_jpeg_compression(quality=quality_value)
+            generator.save_output(res_jpg, "jpeg", quality_value)
 
-            # # 4. JPEG 2000
-            # compression_ratio = np.random.randint(1, 20)
-            # res_jp2 = generator.add_jpeg2000_compression(compression_ratio=compression_ratio)
-            # generator.save_output(res_jp2, "jpeg2000", compression_ratio)
+            # 4. JPEG 2000
+            compression_ratio = np.random.randint(1, 20)
+            res_jp2 = generator.add_jpeg2000_compression(compression_ratio=compression_ratio)
+            generator.save_output(res_jp2, "jpeg2000", compression_ratio)
 
             # 5. Contrast Decrement
-            alpha_value = np.random.uniform(0.1, 0.8)
+            alpha_value = np.random.uniform(0.05, 0.8)
             res_contrast = generator.change_contrast(alpha=alpha_value)
             generator.save_output(res_contrast, "contrast", f'{alpha_value:.2f}')
             
             # 6. Pink Noise (Variação na escala espacial)
-            intensity_value = np.random.uniform(0.05, 0.2)
+            intensity_value = np.random.uniform(0.01, 0.2)
             spatial_scale_val = np.random.uniform(0.8, 1.5) # Altera a frequência do ruído rosa
             res_pink = generator.add_pink_noise(intensity=intensity_value, spatial_scale=spatial_scale_val)
             generator.save_output(res_pink, "fnoise", f'i{intensity_value:.2f}_s{spatial_scale_val:.2f}')

@@ -183,7 +183,7 @@ class FilesManipulation:
                 output_filename = f"{pos}_{file_name}" 
                 
                 output = os.path.join(output_path, output_filename)
-                part.save(output)
+                part.save(output, quality=100, subsampling=0)
             else:
                 print(f"Warning: '{pos}' unknown. Skipping.")
 
@@ -278,7 +278,7 @@ class FilesManipulation:
                 output_filename = f"{name_no_ext}_r{row_idx}_c{col_idx}{ext}"
                 output_full_path = os.path.join(output_path, output_filename)
                 
-                part.save(output_full_path)
+                part.save(output_full_path, quality=100, subsampling=0)
                 col_idx += 1
             
             # Só incrementa a linha se pelo menos uma coluna foi processada nesta iteração
@@ -356,8 +356,8 @@ class FilesManipulation:
 if __name__ == "__main__":
     manipulator = FilesManipulation()
     
-    base_dir = '/home/jmn/dev/Datasets/LIVE_512/'
-    folders = ['src']
+    base_dir = '/home/jmn/Dev/Datasets/ECSIQ/'
+    folders = ['awgn', 'blur', 'contrast', 'fnoise', 'jpeg', 'jpeg2000', 'src']
     
     for folder in folders:
         manipulator.flip_images(
@@ -370,14 +370,14 @@ if __name__ == "__main__":
     # for folder in folders:
     #     manipulator.crop_images(
     #         input_folder=f"{base_dir}/{folder}",
-    #         output_folder=f"/home/jmn/dev/Datasets/LIVE_512/src",
-    #         crop_size=512,
+    #         output_folder=f"/home/jmn/Dev/Datasets/DIST/{folder}",
+    #         crop_size=1920,
     #         positions=['center'],
     #     )
     
     # for folder in folders:
     #     manipulator.resize_images(
-    #         folder_path=f"{base_dir}/{folder}",
-    #         output_folder=f"{base_dir}/{folder}",
+    #         folder_path=f"{base_dir}/{folder}/src",
+    #         output_folder=f"{base_dir}/{folder}/src",
     #         new_size=(512, 512)
     #     )
