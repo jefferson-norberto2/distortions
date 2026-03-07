@@ -13,19 +13,21 @@ if __name__ == '__main__':
     # download.download_file(URL_CSIQ, './data/ECSIQ.zip', unzip=True)
 
     # Train and test model
-    model = 'resnet_18'  
+    model = 'resnet18gdn' # 'resnet50', 'resnet101', 'resnet152', 'efficientnet_b0', 'efficientnet_b1', 'efficientnet_b2', 'efficientnet_b3', 'efficientnet_b4', 'efficientnet_b5', 'efficientnet_b6', 'efficientnet_b7'
     wandb_enable = False
     best = train_model(backbone=model, 
-                       data_dir='/home/jmn/dev/Datasets/ECSIQ_512/', 
+                       data_dir='/home/jmn/Dev/Datasets/Distortions_v4/', 
                        num_epochs=10, 
                        batch_size=16, 
                        lr=0.0001, 
-                       wandb_enable=wandb_enable, img_size=512)
+                       wandb_enable=wandb_enable, 
+                       img_size=512
+                       )
     
-    test_model(
-        weight_path=best, 
-        name_model=model, 
-        folder_path='/home/jmn/dev/Datasets/LIVE_512', 
-        wandb_enable=wandb_enable)
+    # test_model(
+    #     weight_path=best, 
+    #     name_model=model, 
+    #     folder_path='/home/jmn/Dev/Datasets/LIVE_512', 
+    #     wandb_enable=wandb_enable)
 
 

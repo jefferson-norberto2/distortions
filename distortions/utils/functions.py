@@ -42,15 +42,14 @@ def train_epoch(model, train_loader, criterion, optimizer, device):
 
         outputs = model(images)
 
-        # Caso o modelo retorne duas saídas (Inception)
-        if isinstance(outputs, tuple) or isinstance(outputs, list):
-            logits, aux_logits = outputs
-            loss_main = criterion(logits, labels)
-            loss_aux = criterion(aux_logits, labels) * 0.4
+        # Checa se o modelo retornou a estrutura do Inception no modo treino
+        if hasattr(outputs, 'logits') and hasattr(outputs, 'aux_logits'):
+            loss_main = criterion(outputs.logits, labels)
+            loss_aux = criterion(outputs.aux_logits, labels) * 0.4
             loss = loss_main + loss_aux
-            preds_for_metrics = logits
+            preds_for_metrics = outputs.logits
         else:
-            # ResNet, MobileNet, EfficientNet, etc
+            # Para ResNet, EfficientNet, ou se aux_logits estiver desativado
             loss = criterion(outputs, labels)
             preds_for_metrics = outputs
 
@@ -97,9 +96,6 @@ def validate_epoch(model, val_loader, criterion, device):
             images, labels = images.to(device), labels.to(device)
            
             outputs = model(images)
-           
-            if isinstance(model, models.Inception3):
-                outputs = outputs[0]  # só logits
 
             loss = criterion(outputs, labels)
 

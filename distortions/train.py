@@ -2,7 +2,6 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import wandb
-import time
 import os
 
 import matplotlib.pyplot as plt
@@ -14,6 +13,7 @@ from distortions.model.custom_inception import CustomInception
 from distortions.utils.functions import train_epoch, validate_epoch
 from distortions.dataset.dataloaders import get_train_dataloaders  
 from distortions.model.distortion_hunter import DistortionHunter
+from distortions.model.resnet18_gdn import resnet18_gdn
 
 def main(model, backbone, dataset_name, train_loader, val_loader, train_dataset, val_dataset, device, num_epochs, lr, wandb_enable) -> str:
     best_acc = 0.0
@@ -27,7 +27,7 @@ def main(model, backbone, dataset_name, train_loader, val_loader, train_dataset,
         mode="online" if wandb_enable else "disabled",
         project="distortions-detect",
         config={
-            "architecture": type(model.backbone).__name__,
+            "architecture": backbone,
             "epochs": num_epochs,
             "learning_rate": lr,
             "batch_size": train_loader.batch_size,
@@ -97,7 +97,7 @@ def main(model, backbone, dataset_name, train_loader, val_loader, train_dataset,
 
 
 def train_model(
-    backbone='resnet_50',
+    backbone='resnet50',
     data_dir="/home/jmn/host/dev/Datasets/IQA/ECSIQ/",
     img_size=320,
     batch_size=32,
@@ -114,7 +114,7 @@ def train_model(
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-    if backbone.lower() == "inception_v3":
+    if backbone.lower() == "inceptionv3":
         model = CustomInception(
             num_classes=len(train_dataset.classes),
             pre_treined=True,
@@ -130,6 +130,8 @@ def train_model(
         model = DistortionHunter(
             num_classes=len(train_dataset.classes)
         ).to(device)
+    elif backbone.lower().startswith("resnet18gdn"):
+        model = resnet18_gdn(num_classes=len(train_dataset.classes)).to(device)
     else:
         model = CustomResNet(
             num_classes=len(train_dataset.classes),

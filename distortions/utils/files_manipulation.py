@@ -24,7 +24,7 @@ class FilesManipulation:
         try:
             img = Image.open(image_path)
             img_resized = img.resize(new_size, Image.Resampling.LANCZOS)
-            img_resized.save(output_path, quality=100, subsampling=0)
+            img_resized.save(output_path, quality=100, subsampling=0, compress_level=0)
             img.close()
         except Exception as e:
             raise RuntimeError(f"Error resizing image {image_path}: {e}")
@@ -44,13 +44,18 @@ class FilesManipulation:
         os.makedirs(output_folder, exist_ok=True)
         print("🚀 Starting resizing of images...")
         
-        for file_name in tqdm(os.listdir(folder_path)):
-            
-            file_path = os.path.join(folder_path, file_name)
+        for full_file_name in tqdm(os.listdir(folder_path)):
 
-            if file_name.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp', '.tiff')):
+            # file name sem extensão para nomear a saída
+            file_name, ext = os.path.splitext(full_file_name)
+            
+            file_path = os.path.join(folder_path, full_file_name)
+
+            valid_extensions = ('.png', '.jpg', '.jpeg', '.bmp', '.tiff')
+
+            if ext in valid_extensions:
                 
-                output_path = os.path.join(output_folder, file_name)
+                output_path = os.path.join(output_folder, f'{file_name}.png')
                 
                 self.resize_single_image(file_path, output_path, new_size)
     
@@ -120,7 +125,7 @@ class FilesManipulation:
                         
                         fliped_path = os.path.join(folder_path, fliped_name)
                         
-                        fliped_image.save(fliped_path, quality=100, subsampling=0)
+                        fliped_image.save(fliped_path, quality=100, subsampling=0, compress_level=0)
 
     def crop_single_image(
             self, 
@@ -142,7 +147,10 @@ class FilesManipulation:
         """
         os.makedirs(output_path, exist_ok=True)
         
-        file_name = os.path.basename(input_file_path)
+        full_file_name = os.path.basename(input_file_path)
+
+        # remove extension for output naming
+        file_name, _ = os.path.splitext(full_file_name)
         
         try:
             img = Image.open(input_file_path)
@@ -180,10 +188,10 @@ class FilesManipulation:
                 box = coords_map[pos]
                 part = img.crop(box)
                 
-                output_filename = f"{pos}_{file_name}" 
+                output_filename = f"{pos}_{file_name}.png" 
                 
                 output = os.path.join(output_path, output_filename)
-                part.save(output, quality=100, subsampling=0)
+                part.save(output, quality=100, subsampling=0, compress_level=0)
             else:
                 print(f"Warning: '{pos}' unknown. Skipping.")
 
@@ -278,7 +286,7 @@ class FilesManipulation:
                 output_filename = f"{name_no_ext}_r{row_idx}_c{col_idx}{ext}"
                 output_full_path = os.path.join(output_path, output_filename)
                 
-                part.save(output_full_path, quality=100, subsampling=0)
+                part.save(output_full_path, quality=100, subsampling=0, compress_level=0)
                 col_idx += 1
             
             # Só incrementa a linha se pelo menos uma coluna foi processada nesta iteração
@@ -356,28 +364,39 @@ class FilesManipulation:
 if __name__ == "__main__":
     manipulator = FilesManipulation()
     
-    base_dir = '/home/jmn/Dev/Datasets/ECSIQ/'
-    folders = ['awgn', 'blur', 'contrast', 'fnoise', 'jpeg', 'jpeg2000', 'src']
+    base_dir = '/home/jmn/Dev/Datasets/Originals'
+    output_dir = '/home/jmn/Dev/Datasets/Distortions_v3'
+    # folders = ['awgn', 'blur', 'contrast', 'fnoise', 'jpeg', 'jpeg2000', 'src']
+    folders = ['train', 'val']
     
     for folder in folders:
         manipulator.flip_images(
-            folder_path=f"{base_dir}/{folder}",
+            folder_path=f"{output_dir}/{folder}/src",
             types=['horizontal', 'vertical', 'both']
         )
     
     # folders = ['jpeg2000']
+    # positions = ['top_left', 'top_right', 'bottom_left', 'bottom_right']
+    # positions = ['center']
     
     # for folder in folders:
     #     manipulator.crop_images(
     #         input_folder=f"{base_dir}/{folder}",
-    #         output_folder=f"/home/jmn/Dev/Datasets/DIST/{folder}",
+    #         output_folder=f"{output_dir}/{folder}/src",
     #         crop_size=1920,
-    #         positions=['center'],
+    #         positions=positions,
+    #     )
+
+    # for folder in folders:
+    #     manipulator.crop_images_2(
+    #         input_folder=f"{output_dir}/{folder}/src",
+    #         output_folder=f"{output_dir}_v2/{folder}/src",
+    #         crop_size=480
     #     )
     
     # for folder in folders:
     #     manipulator.resize_images(
     #         folder_path=f"{base_dir}/{folder}/src",
     #         output_folder=f"{base_dir}/{folder}/src",
-    #         new_size=(512, 512)
-    #     )
+    #         new_size=(1024, 1024)
+    #    )

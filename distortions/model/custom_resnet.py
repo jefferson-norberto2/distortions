@@ -16,23 +16,23 @@ class CustomResNet(Module):
         self.backbone.fc = Linear(num_ftrs, num_classes)
     
     def get_backbone_and_weights(self, name_model: str, pre_trained: bool) -> Module:
-        if name_model == 'resnet_18':
+        if name_model == 'resnet18':
             weights = models.ResNet18_Weights.IMAGENET1K_V1 if pre_trained else None
             back = models.resnet18(weights=weights)
-        elif name_model == 'resnet_34':
+        elif name_model == 'resnet34':
             weights = models.ResNet34_Weights.IMAGENET1K_V1 if pre_trained else None
             back = models.resnet34(weights=weights)
-        elif name_model == 'resnet_50':
+        elif name_model == 'resnet50':
             weights = models.ResNet50_Weights.IMAGENET1K_V2 if pre_trained else None
             back = models.resnet50(weights=weights)
-        elif name_model == 'resnet_101':
+        elif name_model == 'resnet101':
             weights = models.ResNet101_Weights.IMAGENET1K_V2 if pre_trained else None
             back = models.resnet101(weights=weights)
-        elif name_model == 'resnet_152':
+        elif name_model == 'resnet152':
             weights = models.ResNet152_Weights.IMAGENET1K_V2 if pre_trained else None
             back = models.resnet152(weights=weights)
         else:
-            raise ValueError(f"Model error: {name_model}, choose: 'resnet_50', 'resnet_101', 'resnet_152'.")
+            raise ValueError(f"Model error: {name_model}, choose: 'resnet18', 'resnet34', 'resnet50', 'resnet101', 'resnet152'.")
         return back
 
     def forward(self, x):

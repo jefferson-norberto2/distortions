@@ -6,11 +6,13 @@ def augment(image):
 model = YOLO('yolo26m-cls.pt') 
 
 results = model.train(
-    data='/home/jmn/Dev/Datasets/DISTCSIQ/', 
-    epochs=20, 
-    imgsz=512, 
+    data='/home/jmn/Dev/Datasets/Distortions_v3/', 
+    epochs=3, 
+    imgsz=480, 
     device=0, 
-    batch=20,
+    batch=24,
+    save=True,        
+    save_period=1,    
     # --- Desativando Augmentations ---
     hsv_h=0.0,      # Ajuste de matiz (hue)
     hsv_s=0.0,      # Ajuste de saturação

@@ -48,7 +48,7 @@ class DistortionGenerator:
         save_path = f'{self.root_path}/{distortion_name}'
         os.makedirs(save_path, exist_ok=True)
         file_path = f"{save_path}/dist_{level}_{self.img_name}.png"
-        cv2.imwrite(file_path, img_out)
+        cv2.imwrite(file_path, img_out, [cv2.IMWRITE_PNG_COMPRESSION, 0])
     
     # 1. Gaussian Blur (Kernel e Sigma dinâmicos)
     def add_gaussian_blur(self, sigma=2.0, force_kernel=None):
@@ -159,8 +159,7 @@ if __name__ == "__main__":
     try:
         generator = DistortionGenerator() 
 
-        folder_path = '/home/jmn/Dev/Datasets/DIST/val/src'
-        # Adicionei uma checagem caso o diretório não exista na hora de rodar
+        folder_path = '/home/jmn/Dev/Datasets/Distortions_v3/val/src'
         if not os.path.exists(folder_path):
             print(f"Diretório não encontrado: {folder_path}")
             files = []
@@ -176,7 +175,7 @@ if __name__ == "__main__":
                 continue
             
             # 1. Blur Dinâmico
-            sigma_value = np.random.uniform(0.2, 4.0)
+            sigma_value = np.random.uniform(0.8, 4.0)
             # 50% de chance de deixar o cv2 calcular o kernel ideal, 50% de chance de forçar um kernel estranho (ex: kernel pequeno com sigma alto)
             k_force = np.random.choice([None, np.random.randint(3, 15)]) 
             res_blur = generator.add_gaussian_blur(sigma=sigma_value, force_kernel=k_force)
@@ -200,12 +199,12 @@ if __name__ == "__main__":
             generator.save_output(res_jp2, "jpeg2000", compression_ratio)
 
             # 5. Contrast Decrement
-            alpha_value = np.random.uniform(0.05, 0.8)
+            alpha_value = np.random.uniform(0.08, 0.6)
             res_contrast = generator.change_contrast(alpha=alpha_value)
             generator.save_output(res_contrast, "contrast", f'{alpha_value:.2f}')
             
             # 6. Pink Noise (Variação na escala espacial)
-            intensity_value = np.random.uniform(0.01, 0.2)
+            intensity_value = np.random.uniform(0.03, 0.2)
             spatial_scale_val = np.random.uniform(0.8, 1.5) # Altera a frequência do ruído rosa
             res_pink = generator.add_pink_noise(intensity=intensity_value, spatial_scale=spatial_scale_val)
             generator.save_output(res_pink, "fnoise", f'i{intensity_value:.2f}_s{spatial_scale_val:.2f}')
