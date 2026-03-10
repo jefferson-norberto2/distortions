@@ -18,7 +18,7 @@ model = YOLO('runs/classify/train4/weights/best.pt')
 # Definições
 classes = {0: 'awgn', 1: 'blur', 2: 'contrast', 3: 'fnoise', 4: 'jpeg', 5: 'jpeg2000', 6: 'src'}
 class_names = [classes[i] for i in range(len(classes))] # [0, 1, 2, 3] -> nomes
-base_path = '/home/jmn/Dev/Datasets/CSIQ'
+base_path = '/home/jmn/Dev/Datasets/Distortions_v3/test'
 
 y_true = []
 y_pred = []
@@ -48,7 +48,7 @@ for key, value in classes.items():
         results = model.predict(
             source=img_path,
             device=0,
-            imgsz=512, 
+            imgsz=480, 
             save=False,
             verbose=False,
         )

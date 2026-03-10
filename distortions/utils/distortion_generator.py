@@ -159,7 +159,7 @@ if __name__ == "__main__":
     try:
         generator = DistortionGenerator() 
 
-        folder_path = '/home/jmn/Dev/Datasets/Distortions_v3/val/src'
+        folder_path = '/home/jmn/Dev/Datasets/Distortions_v3/test/src'
         if not os.path.exists(folder_path):
             print(f"Diretório não encontrado: {folder_path}")
             files = []

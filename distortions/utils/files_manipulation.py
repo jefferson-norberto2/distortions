@@ -367,23 +367,23 @@ if __name__ == "__main__":
     base_dir = '/home/jmn/Dev/Datasets/Originals'
     output_dir = '/home/jmn/Dev/Datasets/Distortions_v3'
     # folders = ['awgn', 'blur', 'contrast', 'fnoise', 'jpeg', 'jpeg2000', 'src']
-    folders = ['train', 'val']
+    folders = ['test']
     
-    for folder in folders:
-        manipulator.flip_images(
-            folder_path=f"{output_dir}/{folder}/src",
-            types=['horizontal', 'vertical', 'both']
-        )
+    # for folder in folders:
+    #     manipulator.flip_images(
+    #         folder_path=f"{output_dir}/{folder}/src",
+    #         types=['horizontal', 'vertical', 'both']
+    #     )
     
     # folders = ['jpeg2000']
-    # positions = ['top_left', 'top_right', 'bottom_left', 'bottom_right']
+    positions = ['top_left', 'top_right', 'bottom_left', 'bottom_right']
     # positions = ['center']
     
     # for folder in folders:
     #     manipulator.crop_images(
-    #         input_folder=f"{base_dir}/{folder}",
-    #         output_folder=f"{output_dir}/{folder}/src",
-    #         crop_size=1920,
+    #         input_folder=f"{output_dir}/{folder}/src",
+    #         output_folder=f"{output_dir}/{folder}/src_v2",
+    #         crop_size=960,
     #         positions=positions,
     #     )
 
@@ -394,9 +394,9 @@ if __name__ == "__main__":
     #         crop_size=480
     #     )
     
-    # for folder in folders:
-    #     manipulator.resize_images(
-    #         folder_path=f"{base_dir}/{folder}/src",
-    #         output_folder=f"{base_dir}/{folder}/src",
-    #         new_size=(1024, 1024)
-    #    )
+    for folder in folders:
+        manipulator.resize_images(
+            folder_path=f"{output_dir}/{folder}/src_v2",
+            output_folder=f"{output_dir}/{folder}/src_v2",
+            new_size=(480, 480)
+       )
