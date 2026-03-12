@@ -47,46 +47,28 @@ class DistortionGenerator:
         img_out = (img_clipped * 255).astype(np.uint8)
         save_path = f'{self.root_path}/{distortion_name}'
         os.makedirs(save_path, exist_ok=True)
+        # Salva usando o nível discreto no nome do arquivo (ex: dist_1_imagem.png)
         file_path = f"{save_path}/dist_{level}_{self.img_name}.png"
         cv2.imwrite(file_path, img_out, [cv2.IMWRITE_PNG_COMPRESSION, 0])
     
-    # 1. Gaussian Blur (Kernel e Sigma dinâmicos)
+    # 1. Gaussian Blur
     def add_gaussian_blur(self, sigma=2.0, force_kernel=None):
-        """
-        Applies a Gaussian filter with dynamic kernels.
-        Se force_kernel for None, o OpenCV calcula o kernel ideal baseado no sigma.
-        """
         self._check_image_loaded()
-        
         if force_kernel is not None:
-            # Garante que o kernel seja ímpar
             k = int(force_kernel)
             k = k if k % 2 != 0 else k + 1
             kernel_size = (k, k)
         else:
-            # (0,0) faz o cv2 calcular o tamanho do kernel automaticamente usando a fórmula do sigma
             kernel_size = (0, 0)
-            
         blurred = cv2.GaussianBlur(self.img, kernel_size, sigma)
         return blurred
 
-    # 2. Poisson-Gaussian Noise (Signal-Dependent Noise)
+    # 2. Poisson-Gaussian Noise
     def add_poisson_gaussian_noise(self, shot_noise=0.01, read_noise=0.001):
-        """
-        Simula ruído realista de sensor.
-        shot_noise: ruído dependente dos fótons (afeta mais as áreas claras)
-        read_noise: ruído eletrônico base (afeta a imagem toda, visível nas sombras)
-        """
         self._check_image_loaded()
-        
-        # Variância total = (intensidade * shot_noise) + read_noise
-        # Criamos um mapa de desvio padrão (sigma) para cada pixel
         variance_map = (self.img * shot_noise) + read_noise
         sigma_map = np.sqrt(np.clip(variance_map, 0, None))
-        
-        # Gera ruído normal padronizado e multiplica pelo mapa de sigma
         noise = np.random.normal(0, 1, self.img.shape) * sigma_map
-        
         noisy_img = self.img + noise
         return noisy_img
 
@@ -105,7 +87,7 @@ class DistortionGenerator:
     def add_jpeg2000_compression(self, compression_ratio=20):
         self._check_image_loaded()
         img_u8 = np.clip(self.img * 255, 0, 255).astype(np.uint8)
-        temp_filename = f"temp_dist_{np.random.randint(1000,9999)}.jp2" # Evita conflito de arquivos
+        temp_filename = f"temp_dist_{np.random.randint(1000,9999)}.jp2"
         try:
             cv2.imwrite(temp_filename, img_u8, [cv2.IMWRITE_JPEG2000_COMPRESSION_X1000, compression_ratio * 10])
             jp2_img = cv2.imread(temp_filename)
@@ -125,7 +107,7 @@ class DistortionGenerator:
         contrast_img = alpha * (self.img - gray_mean) + gray_mean
         return contrast_img
 
-    # 6. Additive Pink Gaussian Noise (com variação espacial leve)
+    # 6. Additive Pink Gaussian Noise
     def add_pink_noise(self, intensity=0.05, spatial_scale=1.0):
         self._check_image_loaded()
         def pink_noise_2d(shape):
@@ -137,7 +119,6 @@ class DistortionGenerator:
             f = np.sqrt(u_grid**2 + v_grid**2)
             f[0, 0] = 1.0 
             
-            # spatial_scale permite alterar a "textura" do ruído rosa
             scale = 1.0 / (f**spatial_scale + 1e-5)
             
             white_noise_spec = np.fft.fft2(np.random.normal(0, 1, shape))
@@ -159,14 +140,26 @@ if __name__ == "__main__":
     try:
         generator = DistortionGenerator() 
 
-        folder_path = '/home/jmn/Dev/Datasets/Distortions_v3/test/src'
+        folder_path = 'Datasets/Dist/test/src'
         if not os.path.exists(folder_path):
             print(f"Diretório não encontrado: {folder_path}")
             files = []
         else:
             files = [file for file in os.listdir(folder_path) if file.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp'))]
 
-        for file in tqdm(files):
+        # --- DEFINIÇÃO DOS 5 NÍVEIS DE DISTORÇÃO ---
+        # Nível 1 = Mais sutil | Nível 5 = Mais severo
+        levels = {
+            'blur_sigma':     [1.0, 1.5, 2.0, 3.0, 4.0],
+            'pgn_shot':       [0.005, 0.015, 0.03, 0.05, 0.08],
+            'pgn_read':       [0.0005, 0.001, 0.002, 0.003, 0.005],
+            'jpeg_quality':   [20, 15, 10, 8, 3],            # Qualidade DIMINUI com o nível
+            'jp2k_ratio':     [1, 4, 7, 10, 13],           # Compressão AUMENTA com o nível
+            'contrast_alpha': [0.6, 0.5, 0.4, 0.3, 0.2], # Alpha DIMINUI com o nível (menor = menos contraste)
+            'pink_intensity': [0.03, 0.07, 0.12, 0.18, 0.25]
+        }
+
+        for file in tqdm(files, desc="Processando imagens"):
             image_path = os.path.join(folder_path, file)
             try:
                 generator.change_image(image_path)
@@ -174,40 +167,33 @@ if __name__ == "__main__":
                 print(f"Erro ao carregar imagem {file}: {e}")
                 continue
             
-            # 1. Blur Dinâmico
-            sigma_value = np.random.uniform(0.8, 4.0)
-            # 50% de chance de deixar o cv2 calcular o kernel ideal, 50% de chance de forçar um kernel estranho (ex: kernel pequeno com sigma alto)
-            k_force = np.random.choice([None, np.random.randint(3, 15)]) 
-            res_blur = generator.add_gaussian_blur(sigma=sigma_value, force_kernel=k_force)
-            generator.save_output(res_blur, "blur", f's{sigma_value:.2f}_k{k_force}')
+            # Aplica os 5 níveis para cada tipo de distorção
+            for lvl in range(5):
+                level_name = lvl + 1 # Salvará como 1, 2, 3, 4, 5
+                
+                # # 1. Blur
+                # res_blur = generator.add_gaussian_blur(sigma=levels['blur_sigma'][lvl], force_kernel=None)
+                # generator.save_output(res_blur, "blur", level_name)
 
-            # 2. Poisson-Gaussian Noise (Ruído Realista)
-            # shot_noise domina altas luzes, read_noise domina baixas luzes
-            shot_v = np.random.uniform(0.005, 0.05)
-            read_v = np.random.uniform(0.0001, 0.005)
-            res_pgn = generator.add_poisson_gaussian_noise(shot_noise=shot_v, read_noise=read_v)
-            generator.save_output(res_pgn, "awgn", f'sh{shot_v:.3f}_rd{read_v:.4f}')
+                # # 2. Poisson-Gaussian Noise
+                # res_pgn = generator.add_poisson_gaussian_noise(shot_noise=levels['pgn_shot'][lvl], read_noise=levels['pgn_read'][lvl])
+                # generator.save_output(res_pgn, "awgn", level_name)
 
-            # 3. JPEG
-            quality_value = np.random.randint(5, 30)
-            res_jpg = generator.add_jpeg_compression(quality=quality_value)
-            generator.save_output(res_jpg, "jpeg", quality_value)
+                # # 3. JPEG
+                # res_jpg = generator.add_jpeg_compression(quality=levels['jpeg_quality'][lvl])
+                # generator.save_output(res_jpg, "jpeg", level_name)
 
-            # 4. JPEG 2000
-            compression_ratio = np.random.randint(1, 20)
-            res_jp2 = generator.add_jpeg2000_compression(compression_ratio=compression_ratio)
-            generator.save_output(res_jp2, "jpeg2000", compression_ratio)
+                # # 4. JPEG 2000
+                # res_jp2 = generator.add_jpeg2000_compression(compression_ratio=levels['jp2k_ratio'][lvl])
+                # generator.save_output(res_jp2, "jpeg2000", level_name)
 
-            # 5. Contrast Decrement
-            alpha_value = np.random.uniform(0.08, 0.6)
-            res_contrast = generator.change_contrast(alpha=alpha_value)
-            generator.save_output(res_contrast, "contrast", f'{alpha_value:.2f}')
-            
-            # 6. Pink Noise (Variação na escala espacial)
-            intensity_value = np.random.uniform(0.03, 0.2)
-            spatial_scale_val = np.random.uniform(0.8, 1.5) # Altera a frequência do ruído rosa
-            res_pink = generator.add_pink_noise(intensity=intensity_value, spatial_scale=spatial_scale_val)
-            generator.save_output(res_pink, "fnoise", f'i{intensity_value:.2f}_s{spatial_scale_val:.2f}')
+                # 5. Contrast Decrement
+                res_contrast = generator.change_contrast(alpha=levels['contrast_alpha'][lvl])
+                generator.save_output(res_contrast, "contrast", level_name)
+                
+                # # 6. Pink Noise (Escala espacial fixa para consistência, apenas a intensidade muda)
+                # res_pink = generator.add_pink_noise(intensity=levels['pink_intensity'][lvl], spatial_scale=1.0)
+                # generator.save_output(res_pink, "fnoise", level_name)
 
     except Exception as e:
         print(f"Erro fatal: {e}")

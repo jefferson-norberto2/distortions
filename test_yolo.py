@@ -13,12 +13,12 @@ save_dir = f"{base_dir}/yolo_{count+1}"
 os.makedirs(save_dir, exist_ok=True)
 
 # Carregar modelo
-model = YOLO('runs/classify/train4/weights/best.pt')
+model = YOLO('runs/classify/train5/weights/best.pt')
 
 # Definições
 classes = {0: 'awgn', 1: 'blur', 2: 'contrast', 3: 'fnoise', 4: 'jpeg', 5: 'jpeg2000', 6: 'src'}
 class_names = [classes[i] for i in range(len(classes))] # [0, 1, 2, 3] -> nomes
-base_path = '/home/jmn/Dev/Datasets/Distortions_v3/test'
+base_path = 'Datasets/CSIQ/train'
 
 y_true = []
 y_pred = []
@@ -48,7 +48,7 @@ for key, value in classes.items():
         results = model.predict(
             source=img_path,
             device=0,
-            imgsz=480, 
+            imgsz=512, 
             save=False,
             verbose=False,
         )
@@ -77,6 +77,12 @@ print("Gerando Matriz de Confusão...")
 cm = confusion_matrix(y_pred, y_true)
 disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=class_names)
 disp.plot(cmap=plt.cm.Blues)
+
+# Este é o bloco mágico que remove os zeros
+for text_obj in disp.text_.ravel():
+    if text_obj.get_text() == '0':
+        text_obj.set_text('') # Deixa a célula sem texto algum
+
 plt.xlabel('True Label')     
 plt.ylabel('Predicted Label') 
 plt.savefig(f"{save_dir}/confusion_matrix_yolo.png", dpi=300)

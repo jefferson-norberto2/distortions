@@ -361,42 +361,69 @@ class FilesManipulation:
 
         print("\n✅ All files have been processed!")
 
-if __name__ == "__main__":
-    manipulator = FilesManipulation()
+import os
+
+def remover_arquivos_especificos(diretorio_raiz, sufixo=".1.png"):
+    print(f"Buscando arquivos terminados em '{sufixo}' em: {diretorio_raiz}\n")
     
-    base_dir = '/home/jmn/Dev/Datasets/Originals'
-    output_dir = '/home/jmn/Dev/Datasets/Distortions_v3'
-    # folders = ['awgn', 'blur', 'contrast', 'fnoise', 'jpeg', 'jpeg2000', 'src']
-    folders = ['test']
+    contador = 0
+    
+    # os.walk navega por todas as subpastas
+    for pasta_atual, subpastas, arquivos in os.walk(diretorio_raiz):
+        for arquivo in arquivos:
+            if arquivo.endswith(sufixo):
+                caminho_completo = os.path.join(pasta_atual, arquivo)
+                
+                try:
+                    os.remove(caminho_completo)
+                    print(f"[DELETADO] {caminho_completo}")
+                    contador += 1
+                except Exception as e:
+                    print(f"[ERRO] Não foi possível deletar {caminho_completo}: {e}")
+
+    print(f"\nTarefa concluída! Total de arquivos removidos: {contador}")
+
+if __name__ == "__main__":
+    # O ponto "." indica a pasta onde o script está salvo
+    diretorio_alvo = "Datasets/CSIQ/train/" 
+    remover_arquivos_especificos(diretorio_alvo, sufixo=".5.png")
+
+# if __name__ == "__main__":
+#     manipulator = FilesManipulation()
+    
+#     base_dir = 'Datasets/Subset/'
+#     output_dir = 'Datasets/Dist/'
+#     # folders = ['awgn', 'blur', 'contrast', 'fnoise', 'jpeg', 'jpeg2000', 'src']
+#     folders = ['test']
     
     # for folder in folders:
     #     manipulator.flip_images(
-    #         folder_path=f"{output_dir}/{folder}/src",
+    #         folder_path=f"{output_dir}/{folder}",
     #         types=['horizontal', 'vertical', 'both']
     #     )
     
-    # folders = ['jpeg2000']
-    positions = ['top_left', 'top_right', 'bottom_left', 'bottom_right']
+#     folders = ['jpeg2000']
+#     positions = ['top_left', 'top_right', 'bottom_left', 'bottom_right', 'center']
     # positions = ['center']
     
     # for folder in folders:
     #     manipulator.crop_images(
-    #         input_folder=f"{output_dir}/{folder}/src",
-    #         output_folder=f"{output_dir}/{folder}/src_v2",
-    #         crop_size=960,
+    #         input_folder=f"{base_dir}/{folder}",
+    #         output_folder=f"{output_dir}/{folder}",
+    #         crop_size=256,
     #         positions=positions,
     #     )
 
     # for folder in folders:
     #     manipulator.crop_images_2(
-    #         input_folder=f"{output_dir}/{folder}/src",
-    #         output_folder=f"{output_dir}_v2/{folder}/src",
-    #         crop_size=480
+    #         input_folder=f"{base_dir}/{folder}",
+    #         output_folder=f"{output_dir}/{folder}/src",
+    #         crop_size=512
     #     )
     
-    for folder in folders:
-        manipulator.resize_images(
-            folder_path=f"{output_dir}/{folder}/src_v2",
-            output_folder=f"{output_dir}/{folder}/src_v2",
-            new_size=(480, 480)
-       )
+    # for folder in folders:
+    #     manipulator.resize_images(
+    #         folder_path=f"{output_dir}/{folder}/src_v2",
+    #         output_folder=f"{output_dir}/{folder}/src_v2",
+    #         new_size=(480, 480)
+    #    )
