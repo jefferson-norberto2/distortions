@@ -1,5 +1,4 @@
 import cv2
-import os
 from pathlib import Path
 from tqdm import tqdm
 
@@ -46,10 +45,10 @@ def convert_dataset(src_root, target_root, color_space='HSV'):
 
 if __name__ == "__main__":
     # 1. Configura os caminhos (Ajuste conforme sua estrutura no Nitro V15)
-    base_dir = "Datasets/CSIQ"
+    base_dir = "Datasets/CSIQ_NV3"
     
     # 2. Executa as conversões
-    convert_dataset(base_dir, "Datasets/CSIQ_HSV", color_space='HSV')
-    convert_dataset(base_dir, "Datasets/CSIQ_LAB", color_space='LAB')
+    convert_dataset(base_dir, f"{base_dir}_HSV", color_space='HSV')
+    convert_dataset(base_dir, f"{base_dir}_LAB", color_space='LAB')
     
     print("\nProcesso concluído! Agora você tem 3 datasets independentes.")

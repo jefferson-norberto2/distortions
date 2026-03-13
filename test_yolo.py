@@ -14,13 +14,13 @@ save_dir = f"{base_dir}/yolo_{count+1}"
 os.makedirs(save_dir, exist_ok=True)
 
 # Carregar modelo
-model_path = 'runs/classify/train9/weights/best.pt'
+model_path = 'runs/classify/train_LAB/weights/best.pt'
 model = YOLO(model_path)
 
 # Definições
 classes = {0: 'awgn', 1: 'blur', 2: 'contrast', 3: 'fnoise', 4: 'jpeg', 5: 'jpeg2000', 6: 'src'}
 class_names = [classes[i] for i in range(len(classes))] # [0, 1, 2, 3] -> nomes
-base_path = 'Datasets/CSIQ_LAB/train'
+base_path = 'Datasets/CSIQ_NV3_LAB/train'
 
 y_true = []
 y_pred = []
