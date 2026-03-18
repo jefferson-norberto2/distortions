@@ -140,7 +140,7 @@ if __name__ == "__main__":
     try:
         generator = DistortionGenerator() 
 
-        folder_path = 'Datasets/Dist/test/src'
+        folder_path = 'Datasets/LIVE_RGB/src'
         if not os.path.exists(folder_path):
             print(f"Diretório não encontrado: {folder_path}")
             files = []
@@ -191,9 +191,9 @@ if __name__ == "__main__":
                 res_contrast = generator.change_contrast(alpha=levels['contrast_alpha'][lvl])
                 generator.save_output(res_contrast, "contrast", level_name)
                 
-                # # 6. Pink Noise (Escala espacial fixa para consistência, apenas a intensidade muda)
-                # res_pink = generator.add_pink_noise(intensity=levels['pink_intensity'][lvl], spatial_scale=1.0)
-                # generator.save_output(res_pink, "fnoise", level_name)
+                # 6. Pink Noise (Escala espacial fixa para consistência, apenas a intensidade muda)
+                res_pink = generator.add_pink_noise(intensity=levels['pink_intensity'][lvl], spatial_scale=1.0)
+                generator.save_output(res_pink, "fnoise", level_name)
 
     except Exception as e:
         print(f"Erro fatal: {e}")

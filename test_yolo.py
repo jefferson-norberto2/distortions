@@ -1,8 +1,8 @@
-from ultralytics import YOLO
+from my_ultralytics import YOLO
 import os
 import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
-from distortions.utils.bar_progress import BarProgress
+from distortions.utils.progress import BarProgress
 import cv2
 
 base_dir = "runs/test"
@@ -11,16 +11,21 @@ os.makedirs(base_dir, exist_ok=True)
 count = sum(1 for folder in os.listdir(base_dir) if folder.startswith('yolo'))
         
 save_dir = f"{base_dir}/yolo_{count+1}"
+
+while os.path.exists(save_dir):
+    count += 1
+    save_dir = f"{base_dir}/yolo_{count+1}"
+
 os.makedirs(save_dir, exist_ok=True)
 
 # Carregar modelo
-model_path = 'runs/classify/train_LAB/weights/best.pt'
+model_path = 'runs/classify/train_HSV/weights/best.pt'
 model = YOLO(model_path)
 
 # Definições
+base_path = 'Datasets/CIST_HSV/test'
 classes = {0: 'awgn', 1: 'blur', 2: 'contrast', 3: 'fnoise', 4: 'jpeg', 5: 'jpeg2000', 6: 'src'}
 class_names = [classes[i] for i in range(len(classes))] # [0, 1, 2, 3] -> nomes
-base_path = 'Datasets/CSIQ_NV3_LAB/train'
 
 y_true = []
 y_pred = []
@@ -109,5 +114,7 @@ with open(f"{save_dir}/informations.yaml", "w") as f:
     f.write(f"Resolution: {wi}x{hi}\n")
     f.write(f"Classes: {class_names}\n")
     f.write(f"Modelo: {model_path}\n")
+
+print("Processo concluído! Resultados salvos em:", save_dir)
 
 

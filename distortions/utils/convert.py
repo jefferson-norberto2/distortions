@@ -45,10 +45,10 @@ def convert_dataset(src_root, target_root, color_space='HSV'):
 
 if __name__ == "__main__":
     # 1. Configura os caminhos (Ajuste conforme sua estrutura no Nitro V15)
-    base_dir = "Datasets/CSIQ_NV3"
+    base_dir = "Datasets/LIVE_RGB"
     
     # 2. Executa as conversões
-    convert_dataset(base_dir, f"{base_dir}_HSV", color_space='HSV')
-    convert_dataset(base_dir, f"{base_dir}_LAB", color_space='LAB')
+    convert_dataset(base_dir, f"LIVE_LAB", color_space='LAB')
+    #convert_dataset(base_dir, f"{base_dir}_LAB", color_space='LAB')
     
     print("\nProcesso concluído! Agora você tem 3 datasets independentes.")

@@ -383,18 +383,18 @@ def remover_arquivos_especificos(diretorio_raiz, sufixo=".1.png"):
 
     print(f"\nTarefa concluída! Total de arquivos removidos: {contador}")
 
-if __name__ == "__main__":
-    # O ponto "." indica a pasta onde o script está salvo
-    diretorio_alvo = "Datasets/CSIQ/train/" 
-    remover_arquivos_especificos(diretorio_alvo, sufixo=".5.png")
-
 # if __name__ == "__main__":
-#     manipulator = FilesManipulation()
+    # O ponto "." indica a pasta onde o script está salvo
+    # diretorio_alvo = "Datasets/CSIQ/train/" 
+    # remover_arquivos_especificos(diretorio_alvo, sufixo=".5.png")
+
+if __name__ == "__main__":
+    manipulator = FilesManipulation()
     
-#     base_dir = 'Datasets/Subset/'
-#     output_dir = 'Datasets/Dist/'
-#     # folders = ['awgn', 'blur', 'contrast', 'fnoise', 'jpeg', 'jpeg2000', 'src']
-#     folders = ['test']
+    base_dir = 'Datasets/LIVE/'
+    output_dir = 'Datasets/LIVE_RGB/'
+    # folders = ['awgn', 'blur', 'contrast', 'fnoise', 'jpeg', 'jpeg2000', 'src']
+    folders = ['awgn', 'blur', 'jpeg', 'jpeg2000', 'src']
     
     # for folder in folders:
     #     manipulator.flip_images(
@@ -404,15 +404,15 @@ if __name__ == "__main__":
     
 #     folders = ['jpeg2000']
 #     positions = ['top_left', 'top_right', 'bottom_left', 'bottom_right', 'center']
-    # positions = ['center']
+    positions = ['center']
     
-    # for folder in folders:
-    #     manipulator.crop_images(
-    #         input_folder=f"{base_dir}/{folder}",
-    #         output_folder=f"{output_dir}/{folder}",
-    #         crop_size=256,
-    #         positions=positions,
-    #     )
+    for folder in folders:
+        manipulator.crop_images(
+            input_folder=f"{base_dir}/{folder}",
+            output_folder=f"{output_dir}/{folder}",
+            crop_size=512,
+            positions=positions,
+        )
 
     # for folder in folders:
     #     manipulator.crop_images_2(

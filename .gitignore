@@ -6,7 +6,6 @@ __pycache__/
 wandb/
 Datasets/
 runs/
-data/
 *.pt
 
 *.pth

@@ -1,20 +1,18 @@
-import time
-import random
 from rich.progress import Progress, BarColumn, TextColumn, TimeRemainingColumn
 from rich.console import Console
+from typing import List
 
 class BarProgress:
-    def __init__(self, header: list, width: int):
+    def __init__(self, header: List[str], width: int, colors: List[str] = None):
         self.console = Console()
         self.progress = None
         self.header = header
         self.width = width
-        self.colors = ['cyan', 'magenta', 'red', 'yellow', 'white', 'green', 'blue']
+        self.colors = colors or ['cyan', 'magenta', 'red', 'yellow', 'white', 'green', 'blue']
         
         self.__configure_header()
 
     def __configure_header(self):
-        # 1. Cabeçalho (Header)
         header_str = ""
         for title in self.header:
             header_str += f"{title:<{self.width}}"
@@ -35,7 +33,7 @@ class BarProgress:
             desc_str += f"[{self.colors[i]}]{desc:<{self.width}}[/]"
         return desc_str
     
-    def start(self, total: int):
+    def start(self, total: int) -> int:
         self.progress.start()
         task_id = self.progress.add_task("", total=total)
         return task_id
@@ -52,14 +50,11 @@ class BarProgress:
 
 if __name__ == "__main__":
     header = ['Epoch', 'GPU_mem', 'loss', 'Instances', 'Size']
-    bar = BarProgress(header=header, width=12)
+    bar = Progress(header=header, width=12)
     task_id = bar.start(total=300)
     
     for i in range(300):
-        time.sleep(0.05)
-
-        # Dados simulados
-        loss = random.uniform(0.01, 0.02)
+        loss = 0.05 * (300 - i) / 300
         gpu_val = 1.99
         epoch_str = "9/10"
         inst_val = 64
