@@ -98,11 +98,11 @@ def train(args: dict):
 
 if __name__ == "__main__":
     args = {'imgsz': 512, 
-            'batch': 10, 
+            'batch': 16, 
             'epochs': 20, 
             'lr_backbone': 1e-5, 
             'lr_classifier': 1e-5,
-            'model_rgb': 'resnet50', 
-            'model_hsv': 'resnet50',
+            'model_rgb': 'mobilenet_v3_large', 
+            'model_hsv': 'mobilenet_v3_large',
             'dataset_path': 'Datasets/CIST'}
     train(args)

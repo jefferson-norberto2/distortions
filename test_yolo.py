@@ -1,4 +1,4 @@
-from my_ultralytics import YOLO
+from ultralytics import YOLO
 import os
 import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
@@ -19,11 +19,11 @@ while os.path.exists(save_dir):
 os.makedirs(save_dir, exist_ok=True)
 
 # Carregar modelo
-model_path = 'runs/classify/train_HSV/weights/best.pt'
+model_path = 'runs/classify/train_LAB/weights/best.pt'
 model = YOLO(model_path)
 
 # Definições
-base_path = 'Datasets/CIST_HSV/test'
+base_path = 'Datasets/CSIQ_LAB/train'
 classes = {0: 'awgn', 1: 'blur', 2: 'contrast', 3: 'fnoise', 4: 'jpeg', 5: 'jpeg2000', 6: 'src'}
 class_names = [classes[i] for i in range(len(classes))] # [0, 1, 2, 3] -> nomes
 

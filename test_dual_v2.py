@@ -3,153 +3,133 @@ import torch
 import cv2
 import shutil
 import matplotlib.pyplot as plt
-from PIL import Image
-from torchvision import transforms
+import numpy as np
+
+from torch.utils.data import DataLoader
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
-from distortions.utils.progress import BarProgress
+from distortions.dataset.dua_dataset import DualDataset
 from distortions.model.dua_stream_v2 import DualStreamV2
+from tqdm import tqdm
 
+def generate_confusion_matrix(y_true, y_pred, class_names, save_path):
+    def remove_zero_texts(disp):
+        for text_obj in disp.text_.ravel():
+            if text_obj.get_text() == '0':
+                text_obj.set_text('')
 
-# IMPORTANTE: Você precisa importar a classe do seu modelo aqui
-# from seu_arquivo_de_treino import YOLO26DualStreamAttention
+    cm = confusion_matrix(y_pred, y_true)
+    disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=class_names)
+    disp.plot(cmap=plt.cm.Blues)
 
-# ==========================================
-# 1. CONFIGURAÇÕES INICIAIS
-# ==========================================
-base_dir = "runs/test"
-os.makedirs(base_dir, exist_ok=True)
+    remove_zero_texts(disp)
 
-count = sum(1 for folder in os.listdir(base_dir) if folder.startswith('dualstream'))
-save_dir = f"{base_dir}/dualstream_{count+1}"
+    plt.xlabel('True')     
+    plt.ylabel('Predicted') 
+    plt.savefig(f"{save_path}/confusion_matrix.png", dpi=300)
+    plt.close()
 
-while os.path.exists(save_dir):
-    count += 1
-    save_dir = f"{base_dir}/dualstream_{count+1}"
+    cm_normalized = cm.astype('float') / cm.sum(axis=0)[np.newaxis, :]
+    # make 2 decimal places
+    cm_normalized = np.round(cm_normalized, 2)
+    disp_normalized = ConfusionMatrixDisplay(confusion_matrix=cm_normalized, display_labels=class_names)
+    disp_normalized.plot(cmap=plt.cm.Blues)
 
-os.makedirs(save_dir, exist_ok=True)
+    remove_zero_texts(disp_normalized)
 
-# Definições de Classes e Caminhos
-base_path = 'Datasets/CIST/test' # Ajuste para a sua base de teste
-classes = {0: 'awgn', 1: 'blur', 2: 'contrast', 3: 'fnoise', 4: 'jpeg', 5: 'jpeg2000', 6: 'src'}
-class_names = [classes[i] for i in range(len(classes))]
+    plt.xlabel('True')     
+    plt.ylabel('Predicted') 
+    plt.savefig(f"{save_path}/confusion_matrix_normalized.png", dpi=300)
+    plt.close()
 
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+def check_predictions(y_true, y_pred, test_ds, save_path):
+    for i in range(len(y_true)):
+        pred_class = test_ds.class_names[y_pred[i]]
+        true_class = test_ds.class_names[y_true[i]]
+        if pred_class != true_class:
+            error_dir = f"{save_path}/errors/{true_class}_as_{pred_class}"
+            os.makedirs(error_dir, exist_ok=True)
+                
+            img_path = test_ds.samples[i][0]
+            img_name = os.path.basename(img_path)
+            shutil.copy(img_path, f"{error_dir}/{img_name}")
 
-# ==========================================
-# 2. CARREGAMENTO DO MODELO E TRANSFORMS
-# ==========================================
-print("Carregando modelo Dual-Stream...")
-model_path = 'runs/dual_stream_v2/train5/best.pt'
+def make_save_dir(args):
+    save_path = f"{args['base_path']}/{args['experiment_name']}"
+    count = 1
+    while os.path.exists(save_path):
+        save_path = f"{args['base_path']}/{args['experiment_name']}_{count}"
+        count += 1
+    os.makedirs(save_path, exist_ok=True)
+    return save_path
 
-# Instancia a classe (certifique-se de que ela está acessível neste script)
-# Assumindo que num_classes é o tamanho do seu dicionário
-model = DualStreamV2('resnet50', 'resnet50', num_classes=len(classes))
-model.load_state_dict(torch.load(model_path, map_location=device))
-model.to(device)
-model.eval() # Modo de inferência estrito (desliga Dropout, fixa BatchNorm)
+def save_results(args, test_ds, y_true, y_pred, save_path):
+    with open(f"{save_path}/informations.yaml", "w") as f:
+        f.write(f"Accuracy: {args['accuracy']:.2f}%\n")
+        f.write(f"Correct: {sum(1 for true, pred in zip(y_true, y_pred) if true == pred)}\n")
+        f.write(f"Incorrect: {sum(1 for true, pred in zip(y_true, y_pred) if true != pred)}\n")
+        f.write(f"Samples: {len(y_true)}\n")
+        f.write(f"Samples per Class: { {test_ds.class_names[i]: y_true.count(i) for i in range(len(test_ds.class_names))} }\n")
+        f.write(f"Correct per Class: { {test_ds.class_names[i]: sum(1 for true, pred in zip(y_true, y_pred) if true == pred == i) for i in range(len(test_ds.class_names))} }\n")
+        f.write(f"Incorrect per Class: { {test_ds.class_names[i]: sum(1 for true, pred in zip(y_true, y_pred) if true == i and pred != i) for i in range(len(test_ds.class_names))} }\n")
+        f.write(f"Dataset: {args['dataset_path']}\n")
+        f.write(f"Classes: {test_ds.class_names}\n")
+        f.write(f"Model: {args['model']}\n")
+        f.write(f"Weights: {args['weights_path']}\n")
+        f.write(f"head_rgb: {args['head_rgb']}\n")
+        f.write(f"head_hsv: {args['head_hsv']}\n")
 
-# Transformações idênticas às usadas no treinamento
-transform = transforms.Compose([
-    transforms.Resize((512, 512)),
-    transforms.ToTensor(),
-    transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
-])
+        if len(test_ds.samples) > 0:
+            img_path = test_ds.samples[0][0]
+            img_cv = cv2.imread(img_path)
+            hi, wi, _ = img_cv.shape
+            f.write(f"Resolution: {wi}x{hi}\n")
 
-# ==========================================
-# 3. LOOP DE INFERÊNCIA
-# ==========================================
-y_true = []
-y_pred = []
+def test(args: dict):
+    try:
+        save_path = make_save_dir(args)
+        print(f"Results will be saved in: {save_path}")
 
-print("Iniciando inferência...")
-bar = BarProgress(header=['Current step', 'Total steps'], width=12)
+        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        test_ds = DualDataset(args['dataset_path'])
+        test_loader = DataLoader(test_ds, batch_size=1, shuffle=True, num_workers=4)
+        model = DualStreamV2(args['head_rgb'], args['head_hsv'], len(test_ds.class_names)).to(device)
+        model.load_state_dict(torch.load(args['weights_path'], map_location=device))
+        model.eval()
 
-img_path_for_info = ""
+        v_acc, v_total = 0, 0
+        y_true, y_pred = [], []
+        with torch.no_grad():
+            pbar_val = tqdm(test_loader, desc="Testing: ")
+            for x_rgb, x_hsv, labels in pbar_val:
+                x_rgb, x_hsv, labels = x_rgb.to(device), x_hsv.to(device), labels.to(device)
+                outputs = model(x_rgb, x_hsv)
+                preds = outputs.argmax(1)
+                v_acc += (preds == labels).sum().item()
+                v_total += labels.size(0)
+                y_true.extend(labels.cpu().numpy()); y_pred.extend(preds.cpu().numpy())
 
-# Usar autocast na inferência também acelera o teste na RTX 4050
-with torch.no_grad(), torch.amp.autocast('cuda'):
-    for key, value in classes.items():
-        folder_path = os.path.join(base_path, value)
-        
-        if not os.path.exists(folder_path):
-            print(f"Pasta não encontrada: {folder_path}")
-            continue
-
-        images = os.listdir(folder_path)
-        total = len(images)
-        task_id = bar.start(total)
-        
-        for i, img_name in enumerate(images):
-            if not img_name.lower().endswith(('.bmp', '.jpg', '.png', '.jpeg')):
-                continue
-
-            img_path = os.path.join(folder_path, img_name)
-            img_path_for_info = img_path # Guarda a última para pegar a resolução no final
+        check_predictions(y_true, y_pred, test_ds, save_path)
             
-            # 1. Carrega e converte a imagem
-            img_rgb_pil = Image.open(img_path).convert('RGB')
-            img_hsv_pil = img_rgb_pil.convert('HSV')
-            
-            # 2. Aplica transforms e adiciona a dimensão do batch (1, C, H, W)
-            t_rgb = transform(img_rgb_pil).unsqueeze(0).to(device)
-            t_hsv = transform(img_hsv_pil).unsqueeze(0).to(device)
-            
-            # 3. Inferência
-            outputs = model(t_rgb, t_hsv)
-            pred_class = outputs.argmax(1).item() # Pega o índice com maior probabilidade
-            
-            y_true.append(key)
-            y_pred.append(pred_class)
+        accuracy = v_acc / v_total * 100
+        args['accuracy'] = accuracy
 
-            # 4. Salvar erros com shutil.copy (Preserva os artefatos originais da distorção)
-            if key != pred_class:
-                error_dir = f"{save_dir}/errors/{classes[key]}_as_{classes[pred_class]}"
-                os.makedirs(error_dir, exist_ok=True)
-                shutil.copy(img_path, os.path.join(error_dir, img_name))
+        print(f"Test Accuracy: {accuracy:.2f}%")
 
-            bar.update(task_id=task_id, advance=1, description=[i+1, total])
-        bar.stop()
+        generate_confusion_matrix(y_true, y_pred, test_ds.class_names, save_path)
+        save_results(args, test_ds, y_true, y_pred, save_path)
+    except Exception as e:
+        print("An error occurred during testing:", str(e))
 
-# ==========================================
-# 4. MÉTRICAS E EXPORTAÇÃO (Seu código original mantido)
-# ==========================================
-print("Gerando Matriz de Confusão...")
 
-cm = confusion_matrix(y_true, y_pred) # Corrigido: y_true primeiro (padrão Scikit)
-disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=class_names)
-disp.plot(cmap=plt.cm.Blues)
+if __name__ == "__main__":
+    args = {
+        "base_path": 'runs/test',
+        "experiment_name": "dualstreamv2",
+        "dataset_path" : 'Datasets/LIVE_RGB',
+        "weights_path": 'runs/dual_stream_v2/train6/best.pt',
+        "model": DualStreamV2,
+        "head_rgb": 'mobilenet_v3_large',
+        "head_hsv": 'mobilenet_v3_large',
+    }
 
-for text_obj in disp.text_.ravel():
-    if text_obj.get_text() == '0':
-        text_obj.set_text('') 
-
-plt.xlabel('Predicted Label')     
-plt.ylabel('True Label') 
-plt.savefig(f"{save_dir}/confusion_matrix_dualstream.png", dpi=300)
-plt.close()
-
-# Pegar resolução da última imagem processada
-if img_path_for_info:
-    img_cv = cv2.imread(img_path_for_info)
-    hi, wi, _ = img_cv.shape
-else:
-    hi, wi = 0, 0
-
-# Cálculo de acurácia
-accuracy = sum(1 for true, pred in zip(y_true, y_pred) if true == pred) / len(y_true) * 100
-print(f"Acurácia: {accuracy:.2f}%")
-
-with open(f"{save_dir}/informations.yaml", "w") as f:
-    f.write(f"Acurácia: {accuracy:.2f}%\n")
-    f.write(f"Acertos: {sum(1 for true, pred in zip(y_true, y_pred) if true == pred)}\n")
-    f.write(f"Erros: {sum(1 for true, pred in zip(y_true, y_pred) if true != pred)}\n")
-    f.write(f"Total de amostras: {len(y_true)}\n")
-    f.write(f"Amostras por classe: { {class_names[i]: y_true.count(i) for i in range(len(class_names))} }\n")
-    f.write(f"Acertos por classe: { {class_names[i]: sum(1 for true, pred in zip(y_true, y_pred) if true == pred == i) for i in range(len(class_names))} }\n")
-    f.write(f"Erros por classe: { {class_names[i]: sum(1 for true, pred in zip(y_true, y_pred) if true == i and pred != i) for i in range(len(class_names))} }\n")
-    f.write(f"Dataset base: {base_path}\n")
-    f.write(f"Resolution: {wi}x{hi}\n")
-    f.write(f"Classes: {class_names}\n")
-    f.write(f"Modelo: {model_path}\n")
-
-print("Processo concluído! Resultados salvos em:", save_dir)
+    test(args)
