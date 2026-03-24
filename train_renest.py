@@ -6,8 +6,8 @@ from tqdm import tqdm
 from torch.utils.data import DataLoader
 from torchvision import transforms
 from distortions.utils.logger import DualLogger
-from distortions.dataset.dual_dataset import DualDataset
-from distortions.model.dua_stream_v2 import DualStreamV2
+from distortions.dataset.single_dataset import SingleDataset
+from distortions.model.custom_resnet import CustomResNet
 from pathlib import Path
 
 
@@ -21,32 +21,16 @@ def train(args: dict):
     ])
     train_path = Path(args['dataset_path']) / 'train'
     val_path = Path(args['dataset_path']) / 'val'
-    train_ds = DualDataset(train_path, transform=transform)
-    val_ds = DualDataset(val_path, transform=transform)
+    train_ds = SingleDataset(train_path, image_mode='RGB')
+    val_ds = SingleDataset(val_path, image_mode='RGB')
     train_loader = DataLoader(train_ds, batch_size=args['batch'], shuffle=True, num_workers=4)
     val_loader = DataLoader(val_ds, batch_size=args['batch'], shuffle=False, num_workers=4)
-    model = DualStreamV2(args['model_rgb'], args['model_hsv'], len(train_ds.class_names)).to(device)
-
-    logger = DualLogger(args, base_dir="runs/dual_stream_v2", train_dataset=train_ds, val_dataset=val_ds)
+    model = CustomResNet(len(train_ds.class_names), True, args['model']).to(device)
+    logger = DualLogger(args, base_dir=f"runs/{args['model']}", train_dataset=train_ds, val_dataset=val_ds)
     
-    # 1. Separação dos parâmetros
-    backbone_params = list(model.rgb_arm.parameters()) + list(model.hsv_arm.parameters())
-    classifier_params = list(model.classifier.parameters())
+    optimizer = optim.Adam(model.parameters(), lr=args['lr'], weight_decay=1e-4)
 
-    # 2. Otimizador com Differential LRs
-    optimizer = optim.AdamW([
-        {'params': backbone_params, 'lr': args['lr_backbone']},
-        {'params': classifier_params, 'lr': args['lr_classifier']}
-    ], weight_decay=1e-2)
-
-    # 3. Scheduler com limite mínimo (eta_min)
-    # T_max é o número total de épocas. eta_min garante que a rede nunca pare 100% de aprender.
-    scheduler = optim.lr_scheduler.CosineAnnealingLR(
-        optimizer, 
-        T_max=args['epochs'], 
-        eta_min=1e-6 
-    )
-    
+    scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args['epochs'], eta_min=1e-6)
     criterion = nn.CrossEntropyLoss()
     scaler = torch.amp.GradScaler('cuda')
 
@@ -56,12 +40,12 @@ def train(args: dict):
         t_loss, t_acc, total = 0, 0, 0
         pbar = tqdm(train_loader, desc=f"Epoch {epoch+1}/{args['epochs']}")
         
-        for x_rgb, x_hsv, labels in pbar:
-            x_rgb, x_hsv, labels = x_rgb.to(device), x_hsv.to(device), labels.to(device)
+        for x_rgb, labels in pbar:
+            x_rgb, labels = x_rgb.to(device), labels.to(device)
             optimizer.zero_grad()
             
             with torch.amp.autocast('cuda'):
-                outputs = model(x_rgb, x_hsv)
+                outputs = model(x_rgb)
                 loss = criterion(outputs, labels)
             
             scaler.scale(loss).backward()
@@ -79,9 +63,9 @@ def train(args: dict):
         y_true, y_pred = [], []
         with torch.no_grad():
             pbar_val = tqdm(val_loader, desc="Validing: ")
-            for x_rgb, x_hsv, labels in pbar_val:
-                x_rgb, x_hsv, labels = x_rgb.to(device), x_hsv.to(device), labels.to(device)
-                outputs = model(x_rgb, x_hsv)
+            for x_rgb, labels in pbar_val:
+                x_rgb, labels = x_rgb.to(device), labels.to(device)
+                outputs = model(x_rgb)
                 v_loss += criterion(outputs, labels).item() * x_rgb.size(0)
                 preds = outputs.argmax(1)
                 v_acc += (preds == labels).sum().item()
@@ -97,12 +81,13 @@ def train(args: dict):
             logger.save_final_metrics(y_true, y_pred, train_ds.class_names)
 
 if __name__ == "__main__":
-    args = {'imgsz': 512, 
-            'batch': 16, 
-            'epochs': 20, 
-            'lr_backbone': 1e-5, 
-            'lr_classifier': 1e-5,
-            'model_rgb': 'mobilenet_v3_large', 
-            'model_hsv': 'mobilenet_v3_large',
-            'dataset_path': 'Datasets/CIST'}
+    args = {
+        'imgsz': 512, 
+        'batch': 16, 
+        'epochs': 20, 
+        'lr': 1e-5, 
+        'model': 'resnet34', 
+        'dataset_path': 'Datasets/LIST'
+    }
     train(args)
+    

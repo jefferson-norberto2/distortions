@@ -7,7 +7,7 @@ import numpy as np
 
 from torch.utils.data import DataLoader
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
-from distortions.dataset.dua_dataset import DualDataset
+from distortions.dataset.dual_dataset import DualDataset
 from distortions.model.dua_stream_v2 import DualStreamV2
 from tqdm import tqdm
 

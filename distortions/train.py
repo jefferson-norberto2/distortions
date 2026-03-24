@@ -15,7 +15,7 @@ from distortions.dataset.dataloaders import get_train_dataloaders
 from distortions.model.distortion_hunter import DistortionHunter
 from distortions.model.resnet18_gdn import resnet18_gdn
 
-def main(model, backbone, dataset_name, train_loader, val_loader, train_dataset, val_dataset, device, num_epochs, lr, wandb_enable) -> str:
+def main(model, backbone, dataset_name, train_loader, val_loader, train_dataset, val_dataset, device, num_epochs, lr, wandb_enable):
     best_acc = 0.0
     best_loss = 100.00
     model_path = ""
@@ -45,9 +45,14 @@ def main(model, backbone, dataset_name, train_loader, val_loader, train_dataset,
     base_dir = "runs/train"
     os.makedirs(base_dir, exist_ok=True)
     
-    count = sum(1 for folder in os.listdir("runs/train") if folder.startswith(backbone)) 
+    count = sum(1 for folder in os.listdir(base_dir) if folder.startswith(backbone)) 
             
     save_dir = f"{base_dir}/{backbone}_{count+1}"
+    
+    while os.path.exists(save_dir):
+        count += 1
+        save_dir = f"{base_dir}/{backbone}_{count+1}"
+    
     os.makedirs(save_dir, exist_ok=True)
 
     with open(f"{save_dir}/config.yaml", "w") as file:
@@ -60,8 +65,8 @@ def main(model, backbone, dataset_name, train_loader, val_loader, train_dataset,
         train_loss, train_acc, train_precision, train_recall  = train_epoch(model, train_loader, criterion, optimizer, device)
         val_loss, val_acc, val_precision, val_recall, all_preds, all_labels = validate_epoch(model, val_loader, criterion, device)
 
-        print(f"  ➤ Train Loss: {train_loss:.4f}, Train Acc: {train_acc:.2f}%, Train Precision: {train_precision:.2f}%, Train Recall: {train_recall:.2f}% "
-              f"| Val Loss: {val_loss:.4f}, Val Acc: {val_acc:.2f}%, Vall Precision: {val_precision:.2f}%, Vall Recall: {val_recall:.2f}%")
+        print(f"  ➤ Train Loss: {train_loss:.4f}"
+              f"| Val Acc: {val_acc:.2f}%, Vall Precision: {val_precision:.2f}%, Vall Recall: {val_recall:.2f}%")
 
         wandb.log({
             "train_loss": train_loss,
@@ -75,9 +80,9 @@ def main(model, backbone, dataset_name, train_loader, val_loader, train_dataset,
             "lr": optimizer.param_groups[0]["lr"],
         })
 
-        if val_acc > best_acc and val_loss < best_loss:
-            best_acc, best_loss = val_acc, val_loss
-            model_path = f"{save_dir}/best_distortion_{epoch+1}.pth"
+        if val_acc > best_acc:
+            best_acc = val_acc
+            model_path = f"{save_dir}/best.pth"
             torch.save(model.state_dict(), model_path)
 
         if (epoch + 1) % 5 == 0:
@@ -90,11 +95,16 @@ def main(model, backbone, dataset_name, train_loader, val_loader, train_dataset,
             disp.plot(cmap=plt.cm.Blues)
             plt.xlabel('True Label')     
             plt.ylabel('Predicted Label') 
-            plt.savefig(f"{save_dir}/confusion_matrix_epoch_{epoch+1}.png")
+            plt.savefig(f"{save_dir}/confusion_matrix.png")
+
+            cm_norm = confusion_matrix(all_preds, all_labels, normalize='true')
+            disp_norm = ConfusionMatrixDisplay(confusion_matrix=cm_norm, display_labels=train_loader.dataset.classes)
+            disp_norm.plot(cmap=plt.cm.Blues)
+            plt.xlabel('True Label')
+            plt.ylabel('Predicted Label')
+            plt.savefig(f"{save_dir}/confusion_matrix_normalized.png")
 
     wandb.finish()
-    return model_path
-
 
 def train_model(
     backbone='resnet50',
@@ -141,7 +151,7 @@ def train_model(
 
     dataset_name = data_dir.strip('/').split('/')[-1]
 
-    return main(model, backbone, dataset_name, train_loader, val_loader, train_dataset, val_dataset, device, num_epochs, lr, wandb_enable)
+    main(model, backbone, dataset_name, train_loader, val_loader, train_dataset, val_dataset, device, num_epochs, lr, wandb_enable)
 
 
     
