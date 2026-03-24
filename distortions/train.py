@@ -2,49 +2,61 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import wandb
+import os
 
-from distortions.model.noise_model import NoiseClassificationNet
-from distortions.model.custom_resnet import CustomInception, ModelArchitecture, CustomResNet
-from distortions.dataset.dataloader2 import TrainLoader, get_train_data_loader 
-from distortions.utils.functions import mkdir_savel_folder, train_epoch, validate_epoch
+import matplotlib.pyplot as plt
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 
-def main(model, backbone_name: str, loader: TrainLoader, device: torch.device, num_epochs: int, lr: float, wandb_enable: bool) -> str:
+from distortions.model.custom_mobilenet import CustomMobileNetV3
+from distortions.model.custom_resnet import CustomResNet
+from distortions.model.custom_inception import CustomInception
+from distortions.utils.functions import train_epoch, validate_epoch
+from distortions.dataset.dataloaders import get_train_dataloaders  
+from distortions.model.distortion_hunter import DistortionHunter
+from distortions.model.resnet18_gdn import resnet18_gdn
+
+def main(model, backbone, dataset_name, train_loader, val_loader, train_dataset, val_dataset, device, num_epochs, lr, wandb_enable):
     best_acc = 0.0
     best_loss = 100.00
     model_path = ""
 
-    criterion = nn.CrossEntropyLoss(weight=loader.class_weights.to(device))
+    criterion = nn.CrossEntropyLoss(weight=train_loader.class_weights.to(device))
     
     # weight_decay para regularização
     optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=1e-4)
 
-    scheduler = optim.lr_scheduler.ReduceLROnPlateau(
-        optimizer,
-        mode='min',
-        factor=0.5,
-        patience=3
-    )
-
     wandb.init(
-        mode="online" if wandb_enable else "offline",
+        mode="online" if wandb_enable else "disabled",
         project="distortions-detect",
         config={
+            "architecture": backbone,
             "epochs": num_epochs,
             "learning_rate": lr,
-            "batch_size": loader.dataloaders['train'].batch_size,
-            "loss_weights": loader.class_weights.tolist(),
-            "dataset": loader.dataset_name,
-            "train_samples": len(loader.train_dataset),
-            "val_samples": len(loader.val_dataset),
-            "train_distribution": loader.train_distribution,
-            "val_distribution": loader.val_distribution,
-            "optimizer": optimizer.__class__.__name__,
-            "weight_decay": optimizer.param_groups[0]['weight_decay']
+            "batch_size": train_loader.batch_size,
+            "optimizer": type(optimizer).__name__,
+            "criterion": criterion._get_name(),
+            "dataset": dataset_name,
+            "train_size": len(train_loader.dataset),
+            "val_size": len(val_loader.dataset),
+            "num_classes": len(train_dataset.classes),
+            "classes": train_dataset.classes,
         },
-        name=backbone_name
+        name=f"training_{backbone}"
     )
+    
+    base_dir = "runs/train"
+    os.makedirs(base_dir, exist_ok=True)
+    
+    count = sum(1 for folder in os.listdir(base_dir) if folder.startswith(backbone)) 
+            
+    save_dir = f"{base_dir}/{backbone}_{count+1}"
+    
+    while os.path.exists(save_dir):
+        count += 1
+        save_dir = f"{base_dir}/{backbone}_{count+1}"
+    
+    os.makedirs(save_dir, exist_ok=True)
 
-    save_dir = mkdir_savel_folder("runs/train", backbone_name)
 
     # Save yaml config
     with open(f"{save_dir}/config.yaml", "w") as f:
@@ -55,62 +67,92 @@ def main(model, backbone_name: str, loader: TrainLoader, device: torch.device, n
     for epoch in range(num_epochs):
         print(f"\nEpoch [{epoch+1}/{num_epochs}]")
 
-        train_loss, train_acc, train_prec, train_rec = train_epoch(model, loader.dataloaders['train'], criterion, optimizer, device)
-        val_loss, val_acc, val_prec, val_rec = validate_epoch(model, loader.dataloaders['val'], criterion, device)
+        train_loss, train_acc, train_precision, train_recall  = train_epoch(model, train_loader, criterion, optimizer, device)
+        val_loss, val_acc, val_precision, val_recall, all_preds, all_labels = validate_epoch(model, val_loader, criterion, device)
 
-        print(f" ➤ Train Loss: {train_loss:.4f} | Acc: {train_acc:.2f}% || Val Loss: {val_loss:.4f} | Acc: {val_acc:.2f}%")
+        print(f"  ➤ Train Loss: {train_loss:.4f}"
+              f"| Val Acc: {val_acc:.2f}%, Vall Precision: {val_precision:.2f}%, Vall Recall: {val_recall:.2f}%")
 
         if wandb_enable:
             wandb.log({
                 "train_loss": train_loss, "train_acc": train_acc,
                 "val_loss": val_loss, "val_acc": val_acc,
                 "lr": optimizer.param_groups[0]["lr"],
-                "train_precision": train_prec, "train_recall": train_rec,
-                "val_precision": val_prec, "val_recall": val_rec
+                "train_precision": train_precision, "train_recall": train_recall,
+                "val_precision": val_precision, "val_recall": val_recall
             })
 
-        # Save Best Model
-        if val_acc > best_acc and val_loss < best_loss:
+        if val_acc > best_acc:
             best_acc = val_acc
-            best_loss = val_loss
-            best_path = f"{save_dir}/best_model_{epoch+1}.pth"
-            torch.save(model.state_dict(), best_path)
-            print(f"    --> Model Saved! Best Acc: {best_acc:.2f}%")
+            model_path = f"{save_dir}/best.pth"
+            torch.save(model.state_dict(), model_path)
+
+        if (epoch + 1) % 5 == 0:
+            for param_group in optimizer.param_groups:
+                param_group['lr'] *= 0.5
         
-        model_path = f"{save_dir}/last_model.pth"
-        torch.save(model.state_dict(), model_path)
+        if epoch == num_epochs - 1:            
+            cm = confusion_matrix(all_preds, all_labels)
+            disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=train_loader.dataset.classes)
+            disp.plot(cmap=plt.cm.Blues)
+            plt.xlabel('True Label')     
+            plt.ylabel('Predicted Label') 
+            plt.savefig(f"{save_dir}/confusion_matrix.png")
 
-        scheduler.step(val_loss)
+            cm_norm = confusion_matrix(all_preds, all_labels, normalize='true')
+            disp_norm = ConfusionMatrixDisplay(confusion_matrix=cm_norm, display_labels=train_loader.dataset.classes)
+            disp_norm.plot(cmap=plt.cm.Blues)
+            plt.xlabel('True Label')
+            plt.ylabel('Predicted Label')
+            plt.savefig(f"{save_dir}/confusion_matrix_normalized.png")
 
-    if wandb_enable: wandb.finish()
-    return best_path
+    wandb.finish()
 
 def train_model(
-    backbone: ModelArchitecture,
-    data_dir: str,
-    batch_size: int,
-    lr: float,
-    num_epochs: int,
-    wandb_enable: bool,
-    input_size: int = 299,
+    backbone='resnet50',
+    data_dir="/home/jmn/host/dev/Datasets/IQA/ECSIQ/",
+    img_size=320,
+    batch_size=32,
+    lr=1e-4,
+    num_epochs=10,
+    wandb_enable=True
 ):
+    train_loader, val_loader, train_dataset, val_dataset = get_train_dataloaders(
+        data_dir=data_dir, 
+        batch_size=batch_size,
+        img_size=img_size,
+    )
+
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    
-    # 1. Load Data + Weights for Loss
-    input_size = 299 if backbone == ModelArchitecture.INCEPTION_V3 else 224
-    loader = get_train_data_loader(data_dir, batch_size, input_size=input_size)
-    
-    print(f"Class: {loader.class_names}")
-    print(f"Weights to balance: {loader.class_weights}")
 
-    # 2. Initialize Model
-
-    if backbone == ModelArchitecture.INCEPTION_V3:
-        model = CustomInception(num_classes=len(loader.class_names), pre_trained=True, training=True)
-    elif backbone == ModelArchitecture.NOISE_NET:
-        model = NoiseClassificationNet(num_classes=len(loader.class_names))
+    if backbone.lower() == "inceptionv3":
+        model = CustomInception(
+            num_classes=len(train_dataset.classes),
+            pre_treined=True,
+            training=True
+        ).to(device)
+    elif backbone.lower().startswith("mobilenet_v3"):
+        model = CustomMobileNetV3(
+            num_classes=len(train_dataset.classes),
+            pre_trained=True,
+            backbone=backbone
+        ).to(device)
+    elif backbone.lower().startswith("distortion_hunter"):
+        model = DistortionHunter(
+            num_classes=len(train_dataset.classes)
+        ).to(device)
+    elif backbone.lower().startswith("resnet18gdn"):
+        model = resnet18_gdn(num_classes=len(train_dataset.classes)).to(device)
     else:
-        model = CustomResNet(num_classes=len(loader.class_names), backbone=backbone, pretrained=True)
-    model = model.to(device)
+        model = CustomResNet(
+            num_classes=len(train_dataset.classes),
+            pre_treined=True,
+            backbone=backbone
+        ).to(device)
 
-    return main(model, backbone.value, loader, device, num_epochs, lr, wandb_enable)
+    dataset_name = data_dir.strip('/').split('/')[-1]
+
+    main(model, backbone, dataset_name, train_loader, val_loader, train_dataset, val_dataset, device, num_epochs, lr, wandb_enable)
+
+
+    

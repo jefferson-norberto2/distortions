@@ -3,12 +3,12 @@ from ultralytics import YOLO
 def augment(image):
     return image
 
-# Carrega um modelo pré-treinado para classificação (o 'n' é de 'nano', mais rápido)
-model = YOLO('yolo26n-cls.pt') 
+model = YOLO('yolo26mw-cls.pt') 
 
-results = model.train(
-    data='data/MYCSIQ', 
-    epochs=25, 
+model.train(
+    data='Datasets/CIST_HSV', 
+    task='classify',
+    epochs=30, 
     imgsz=512, 
     device=0, 
     batch=16,
@@ -21,9 +21,9 @@ results = model.train(
     scale=0.0,      # Escala (ganho/perda de zoom)
     shear=0.0,      # Cisalhamento
     perspective=0.0,# Perspectiva
-    flipud=0.0,     # Inversão vertical (vire de cabeça para baixo)
-    fliplr=0.0,     # Inversão horizontal (espelhamento)
-    mosaic=0.0,     # Desativa o mosaico (importante para detecção, mas bom zerar)
+    flipud=0.0,     # Inversão vertical
+    fliplr=0.5,     # Inversão horizontal 
+    mosaic=0.0,     # Desativa o mosaico (importante para detecção)
     mixup=0.0,      # Desativa o MixUp (comum em classificação)
     auto_augment=None, # Desativa políticas automáticas (como RandAugment)
     erasing=0.0     # Desativa o Random Erasing

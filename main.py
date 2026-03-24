@@ -1,34 +1,23 @@
 
-from distortions.model.custom_resnet import ModelArchitecture
-from distortions.test import test_model
 from distortions.train import train_model
-from distortions.dataset import download
 
 
 if __name__ == '__main__':
-    # Download examples dataset
-    URL_LIVE = 'https://drive.google.com/file/d/12cCCuaH7CBcx3VzEeFp8wbW-WskO4m0G/view?usp=drive_link'
-    URL_CSIQ = 'https://drive.google.com/file/d/1dfE88U28ntT41EuraCH7gQh4ksAJCFVY/view?usp=drive_link'
+    # Train and test model
+    models = ['resnet152', 'resnet101', 'resnet50', 'resnet34']
+    wandb_enable = False
 
-    download.download_file(URL_LIVE, './data/LIVE.zip', unzip=True)
-    download.download_file(URL_CSIQ, './data/ECSIQ.zip', unzip=True)
-
-    backbone_choice = ModelArchitecture.INCEPTION_V3
-    # best_model_path = train_model(
-    #     backbone=backbone_choice, 
-    #     data_dir='./data/MYCSIQ/',
-    #     num_epochs=10, 
-    #     lr=0.0001,
-    #     batch_size=16,
-    #     wandb_enable=True
-    # )
-
-    test_model(
-        model_path='runs/train/inception_v3_3/best_model_7.pth',
-        backbone=backbone_choice,
-        data_dir='data/LIVE_croped/val/',
-        batch_size=16,
-        wandb_enable=True
-    )
+    for model in models:
+        try:
+            train_model(backbone=model, 
+                            data_dir='Datasets/LIST/', 
+                            num_epochs=20, 
+                            batch_size=16, 
+                            lr=0.0001, 
+                            wandb_enable=wandb_enable, 
+                            img_size=512
+                        )
+        except Exception as e:
+            print(f"Error training {model}: {e}")
 
 

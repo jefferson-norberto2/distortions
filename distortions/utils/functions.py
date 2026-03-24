@@ -1,21 +1,7 @@
 from tqdm import tqdm
 from sklearn.metrics import precision_score, recall_score, accuracy_score
-from torch import no_grad
-from os import listdir, makedirs
+import torch
 
-def mkdir_savel_folder(root_path: str, backbone_name: str) -> str:
-    # List all folders in the root_path that match the backbone_name pattern
-    makedirs(root_path, exist_ok=True)
-    
-    all_folders = listdir(root_path)
-
-    # count existing runs for the given backbone_name
-    run_count = sum(1 for folder in all_folders if folder.startswith(backbone_name))
-    new_folder_name = f"{root_path}/{backbone_name}_{run_count + 1}"
-
-    makedirs(new_folder_name, exist_ok=True)
-    
-    return new_folder_name
 
 
 def train_epoch(model, train_loader, criterion, optimizer, device):
@@ -39,15 +25,14 @@ def train_epoch(model, train_loader, criterion, optimizer, device):
         # Forward Pass
         outputs = model(images)
 
-        # Lógica para Inception (Tuplas) vs Modelos Padrão
-        # Nota: Sua NoiseClassificationNet retorna tensor único, então cairá no 'else'
-        if isinstance(outputs, (tuple, list)):
-            logits, aux_logits = outputs
-            loss_main = criterion(logits, labels)
-            loss_aux = criterion(aux_logits, labels) * 0.4
+        # Checa se o modelo retornou a estrutura do Inception no modo treino
+        if hasattr(outputs, 'logits') and hasattr(outputs, 'aux_logits'):
+            loss_main = criterion(outputs.logits, labels)
+            loss_aux = criterion(outputs.aux_logits, labels) * 0.4
             loss = loss_main + loss_aux
-            preds_for_metrics = logits
+            preds_for_metrics = outputs.logits
         else:
+            # Para ResNet, EfficientNet, ou se aux_logits estiver desativado
             loss = criterion(outputs, labels)
             preds_for_metrics = outputs
 
@@ -67,18 +52,25 @@ def train_epoch(model, train_loader, criterion, optimizer, device):
         all_preds.extend(predicted.cpu().numpy())
         all_labels.extend(labels.cpu().numpy())
 
-        # Atualizar barra de progresso com cálculo aritmético simples (O(1))
         current_loss = running_loss / total_samples
-        current_acc = (correct_predictions / total_samples) * 100
+        current_acc = accuracy_score(all_labels, all_preds) * 100
         
-        progress_bar.set_postfix(loss=f"{current_loss:.4f}", acc=f"{current_acc:.2f}%")
+        gpu_mem = 0
+        if torch.cuda.is_available():
+            gpu_mem = torch.cuda.memory_reserved(device) / 1024**3
 
-    # --- Cálculo Pesado (Fora do Loop - Executa 1x por época) ---
-    # Agora sim usamos o Scikit-Learn
-    epoch_loss = running_loss / len(train_loader.dataset)
-    epoch_acc = accuracy_score(all_labels, all_preds) * 100
+        progress_bar.set_postfix(
+            loss=f"{current_loss:.4f}", 
+            acc=f"{current_acc:.2f}%", 
+            mem=f"{gpu_mem:.2f}GB"
+        )
+
+    train_loss = running_loss / len(train_loader.dataset)
+    
     precision = precision_score(all_labels, all_preds, average="macro", zero_division=0) * 100
     recall = recall_score(all_labels, all_preds, average="macro", zero_division=0) * 100
+    
+    return train_loss, current_acc, precision, recall
 
     return epoch_loss, epoch_acc, precision, recall
 
@@ -93,7 +85,7 @@ def validate_epoch(model, val_loader, criterion, device):
     # Listas para métricas completas (usadas só no final)
     all_preds, all_labels = [], []
 
-    with no_grad():
+    with torch.no_grad():
         progress_bar = tqdm(val_loader, desc="Validando", leave=False, dynamic_ncols=True)
         
         for images, labels in progress_bar:
@@ -101,10 +93,6 @@ def validate_epoch(model, val_loader, criterion, device):
             
             # Forward pass
             outputs = model(images)
-            
-            # Nota: Inception3 em modo .eval() retorna tensor único, 
-            # não precisa da lógica de [0] ou tupla aqui.
-            
             loss = criterion(outputs, labels)
 
             # Acumuladores de Loss e Acurácia Simples
@@ -119,16 +107,15 @@ def validate_epoch(model, val_loader, criterion, device):
             all_preds.extend(predicted.cpu().numpy())
             all_labels.extend(labels.cpu().numpy())
 
-            # Atualiza barra com cálculo aritmético O(1)
             current_loss = running_loss / total_samples
-            current_acc = (correct_predictions / total_samples) * 100
+            current_acc = accuracy_score(all_labels, all_preds) * 100
             
             progress_bar.set_postfix(loss=f"{current_loss:.4f}", acc=f"{current_acc:.2f}%")
 
     # --- Cálculo Pesado (Fora do Loop - Executa 1x por época) ---
     val_loss = running_loss / len(val_loader.dataset)
-    val_acc = accuracy_score(all_labels, all_preds) * 100
+    
     precision = precision_score(all_labels, all_preds, average="macro", zero_division=0) * 100
     recall = recall_score(all_labels, all_preds, average="macro", zero_division=0) * 100
-
-    return val_loss, val_acc, precision, recall
+    
+    return val_loss, current_acc, precision, recall, all_preds, all_labels

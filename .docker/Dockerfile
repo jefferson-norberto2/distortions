@@ -1,4 +1,4 @@
-FROM pytorch/pytorch:2.9.1-cuda12.8-cudnn9-runtime
+FROM ultralytics/ultralytics:latest
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -24,7 +24,7 @@ RUN apt update && apt install -y \
     && rm -rf /var/lib/apt/lists/* \
     && apt clean
 
-RUN pip install tqdm==4.67.1 wandb==0.15.4 scikit-learn==1.4.2 matplotlib==3.8.0 gdown==5.2.0
+RUN pip install tqdm wandb scikit-learn matplotlib gdown
 
 RUN echo "source /etc/bash_completion" >> /etc/bash.bashrc
 

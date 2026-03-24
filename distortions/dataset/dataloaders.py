@@ -4,44 +4,93 @@ from torch.utils.data import Subset
 
 from torch.utils.data import DataLoader, random_split
 from torchvision import datasets, transforms
-from torch import Generator, tensor, stack
-from torch.nn.functional import pad
+from torch import Generator
+import os
 
-def pad_collate(batch):
-    images, labels = zip(*batch)
-
-    max_h = max(img.shape[1] for img in images)
-    max_w = max(img.shape[2] for img in images)
-
-    padded_images = []
-    for img in images:
-        h, w = img.shape[1], img.shape[2]
-
-        pad_w = max_w - w
-        pad_h = max_h - h
-        img = pad(img, (0, pad_w, 0, pad_h))  
-        padded_images.append(img)
-
-    return stack(padded_images), tensor(labels)
-
-
-def get_dataloaders(data_dir: str, train_split: float, batch_size: int) -> tuple[DataLoader, DataLoader]:
+def is_train_val_dataset(datadir: str) -> bool:
 	'''
-	Creates training and validation dataloaders from the dataset located at data_dir.
-	
+	Checks if the dataset directory contains separate 'train' and 'val' subdirectories.
+
 	Args:
-		data_dir (str): Path to the dataset directory.
-		train_split (float): Proportion of the dataset to use for training.
-		batch_size (int): Number of samples per batch.
+		datadir (str): Path to the dataset directory.
 
 	Returns:
-		tuple[DataLoader, DataLoader]: Training and validation dataloaders.
+		bool: True if both 'train' and 'val' subdirectories exist, False otherwise.
 	'''
-	transform = transforms.Compose([
-        #transforms.Resize(299),
+	train_dir = os.path.join(datadir, 'train')
+	val_dir = os.path.join(datadir, 'val')
+	return os.path.isdir(train_dir) and os.path.isdir(val_dir)
+
+def _get_transform(im_size: int) -> transforms.Compose:
+	'''
+	Creates a transformation pipeline for image preprocessing.
+
+	Args:
+		im_size (int): Size to which images will be resized.
+	Returns:
+		transforms.Compose: Composed transformations.
+	'''
+	return transforms.Compose([
+		transforms.CenterCrop(im_size),
 		transforms.ToTensor(),
 	])
 
+def get_val_dataloader(data_dir: str, batch_size: int, im_size: int) -> tuple[DataLoader, datasets.ImageFolder]:
+	'''
+	Creates a validation dataloader from the dataset located at data_dir.
+	
+	Args:
+		data_dir (str): Path to the dataset directory.
+		batch_size (int): Number of samples per batch.
+		im_size (int): Size to which images will be resized.
+
+	Returns:
+		DataLoader: Validation dataloader.
+	'''
+	transform = _get_transform(im_size)
+	
+	dataset = datasets.ImageFolder(root=data_dir, transform=transform)
+	val_loader = DataLoader(dataset, batch_size=batch_size, shuffle=False)
+	return val_loader, dataset
+
+def _train_val_loaders_from_dirs(data_dir: str, transform: transforms.Compose, batch_size: int) -> tuple[DataLoader, DataLoader, datasets.ImageFolder, datasets.ImageFolder]:
+	'''
+	Creates training and validation dataloaders from 'train' and 'val' subdirectories in data_dir.
+	
+	Args:
+		data_dir (str): Path to the dataset directory.
+		transform (transforms.Compose): Transformations to apply to the images.
+		batch_size (int): Number of samples per batch.
+	Returns:
+		tuple[DataLoader, DataLoader]: Training and validation dataloaders.
+	'''
+	train_dir = os.path.join(data_dir, 'train')
+	val_dir = os.path.join(data_dir, 'val')
+
+	train_dataset = datasets.ImageFolder(root=train_dir, transform=transform)
+	val_dataset = datasets.ImageFolder(root=val_dir, transform=transform)
+
+	# Show dataset sizes
+	print(f"📂 Train dataset size: {len(train_dataset)} images")
+	print(f"📂 Validation dataset size: {len(val_dataset)} images")
+
+	train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+	val_loader   = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
+ 
+	return train_loader, val_loader, train_dataset, val_dataset
+
+def _train_val_loaders_from_split(data_dir: str, train_split: float, transform: transforms.Compose, batch_size: int) -> tuple[DataLoader, DataLoader, datasets.ImageFolder, datasets.ImageFolder]:
+	'''
+	Creates training and validation dataloaders by splitting the dataset located at data_dir.
+	
+	Args:
+		data_dir (str): Path to the dataset directory.
+		train_split (float): Proportion of the dataset to use for training
+		transform (transforms.Compose): Transformations to apply to the images.
+		batch_size (int): Number of samples per batch.
+	Returns:
+		tuple[DataLoader, DataLoader]: Training and validation dataloaders.
+	'''	
 	dataset = datasets.ImageFolder(root=data_dir, transform=transform)
 
 	# Show dataset size
@@ -55,43 +104,32 @@ def get_dataloaders(data_dir: str, train_split: float, batch_size: int) -> tuple
 	print(f"🚂 Train set size: {len(train_dataset)} images")
 	print(f"🧪 Validation set size: {len(val_dataset)} images")
 
-	train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, collate_fn=pad_collate)
-	val_loader   = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, collate_fn=pad_collate)
-
+	train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+	val_loader   = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
+ 
 	return train_loader, val_loader, train_dataset, val_dataset
 
+def get_train_dataloaders(data_dir: str, batch_size: int, img_size: int) -> tuple[DataLoader, DataLoader, datasets.ImageFolder, datasets.ImageFolder]:
+	'''
+	Creates training and validation dataloaders from the dataset located at data_dir.
+	
+	Args:
+		data_dir (str): Path to the dataset directory.
+		train_split (float): Proportion of the dataset to use for training.
+		batch_size (int): Number of samples per batch.
+		im_size (int): Size to which images will be resized.
+		is_training (bool): Flag indicating if the dataloaders are for training.
 
-def save_dataset_to_disk(subset: Subset, output_dir: str, split_name: str):
-    """
-    Copia as imagens de um Subset para uma pasta estruturada por classes.
-    """
-    # Recupera o dataset original (ImageFolder)
-    original_dataset = subset.dataset
-    classes = original_dataset.classes
-    
-    print(f"📦 Salvando imagens de {split_name} em: {output_dir}")
+	Returns:
+		tuple[DataLoader, DataLoader]: Training and validation dataloaders.
+	'''
+	transform = _get_transform(img_size)
+	
+	train_loader, val_loader, train_dataset, val_dataset = None, None, None, None
+ 
+	if is_train_val_dataset(data_dir):
+		train_loader, val_loader, train_dataset, val_dataset = _train_val_loaders_from_dirs(data_dir, transform, batch_size)
+	else:
+		train_loader, val_loader, train_dataset, val_dataset = _train_val_loaders_from_split(data_dir, 0.7, transform, batch_size)
 
-    for idx in subset.indices:
-        # Pega o caminho original do arquivo e o índice da classe
-        img_path, class_idx = original_dataset.samples[idx]
-        class_name = classes[class_idx]
-        
-        # Cria a estrutura de pastas: output/split/classe/
-        target_folder = os.path.join(output_dir, split_name, class_name)
-        os.makedirs(target_folder, exist_ok=True)
-        
-        # Copia o arquivo original (mais rápido e mantém a qualidade original)
-        shutil.copy(img_path, os.path.join(target_folder, os.path.basename(img_path)))
-
-# --- Exemplo de uso integrado à sua função ---
-
-if __name__ == "__main__":
-
-	# 1. Gera os subsets usando sua função modificada para retornar os datasets
-	# (Dica: é melhor retornar o train_dataset e val_dataset antes de virarem Loaders)
-	train_loader, val_loader, train_data, val_data = get_dataloaders("./data/ECSIQ", train_split=0.8, batch_size=16)
-
-	# 2. Salva fisicamente
-	output_path = "./data/ECSIQ_YOLO"
-	save_dataset_to_disk(train_data, output_path, "train")
-	save_dataset_to_disk(val_data, output_path, "val")
+	return train_loader, val_loader, train_dataset, val_dataset
