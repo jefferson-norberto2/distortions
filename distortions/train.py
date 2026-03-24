@@ -17,13 +17,10 @@ from distortions.model.resnet18_gdn import resnet18_gdn
 
 def main(model, backbone, dataset_name, train_loader, val_loader, train_dataset, val_dataset, device, num_epochs, lr, wandb_enable):
     best_acc = 0.0
-    best_loss = 100.00
     model_path = ""
 
-    criterion = nn.CrossEntropyLoss(weight=train_loader.class_weights.to(device))
-    
-    # weight_decay para regularização
-    optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=1e-4)
+    criterion = nn.CrossEntropyLoss()
+    optimizer = optim.Adam(model.parameters(), lr=lr)
 
     wandb.init(
         mode="online" if wandb_enable else "disabled",
@@ -57,13 +54,10 @@ def main(model, backbone, dataset_name, train_loader, val_loader, train_dataset,
     
     os.makedirs(save_dir, exist_ok=True)
 
-
-    # Save yaml config
-    with open(f"{save_dir}/config.yaml", "w") as f:
+    with open(f"{save_dir}/config.yaml", "w") as file:
         for key, value in wandb.config.items():
-            f.write(f"{key}: {value}\n")
-    
-    # Training Loop
+            file.write(f"{key}: {value}\n")
+
     for epoch in range(num_epochs):
         print(f"\nEpoch [{epoch+1}/{num_epochs}]")
 
@@ -73,14 +67,17 @@ def main(model, backbone, dataset_name, train_loader, val_loader, train_dataset,
         print(f"  ➤ Train Loss: {train_loss:.4f}"
               f"| Val Acc: {val_acc:.2f}%, Vall Precision: {val_precision:.2f}%, Vall Recall: {val_recall:.2f}%")
 
-        if wandb_enable:
-            wandb.log({
-                "train_loss": train_loss, "train_acc": train_acc,
-                "val_loss": val_loss, "val_acc": val_acc,
-                "lr": optimizer.param_groups[0]["lr"],
-                "train_precision": train_precision, "train_recall": train_recall,
-                "val_precision": val_precision, "val_recall": val_recall
-            })
+        wandb.log({
+            "train_loss": train_loss,
+            "train_acc": train_acc,
+            "train_precision": train_precision,
+            "train_recall": train_recall,
+            "val_loss": val_loss,
+            "val_acc": val_acc,
+            "val_precision": val_precision,
+            "val_recall": val_recall,
+            "lr": optimizer.param_groups[0]["lr"],
+        })
 
         if val_acc > best_acc:
             best_acc = val_acc
@@ -124,6 +121,7 @@ def train_model(
     )
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 
     if backbone.lower() == "inceptionv3":
         model = CustomInception(
