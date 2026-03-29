@@ -1,4 +1,3 @@
-from enum import Enum
 from torch.nn import Module, Linear
 from torchvision import models
 

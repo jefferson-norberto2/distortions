@@ -7,7 +7,7 @@ from torch.utils.data import DataLoader
 from torchvision import transforms
 from distortions.utils.logger import DualLogger
 from distortions.dataset.single_dataset import SingleDataset
-from distortions.model.custom_resnet import CustomResNet
+from distortions.model.custom_inception import CustomInception
 from pathlib import Path
 
 
@@ -25,7 +25,7 @@ def train(args: dict):
     val_ds = SingleDataset(val_path, image_mode='RGB')
     train_loader = DataLoader(train_ds, batch_size=args['batch'], shuffle=True, num_workers=4)
     val_loader = DataLoader(val_ds, batch_size=args['batch'], shuffle=False, num_workers=4)
-    model = CustomResNet(len(train_ds.class_names), True, args['model']).to(device)
+    model = CustomInception(len(train_ds.class_names), True).to(device)
     logger = DualLogger(args, base_dir=f"runs/{args['model']}", train_dataset=train_ds, val_dataset=val_ds)
     
     optimizer = optim.Adam(model.parameters(), lr=args['lr'], weight_decay=1e-4)
@@ -83,10 +83,10 @@ def train(args: dict):
 if __name__ == "__main__":
     args = {
         'imgsz': 512, 
-        'batch': 16, 
-        'epochs': 20, 
+        'batch': 32, 
+        'epochs': 30, 
         'lr': 1e-5, 
-        'model': 'resnet34', 
+        'model': 'inception_v3', 
         'dataset_path': 'Datasets/LIST'
     }
     train(args)

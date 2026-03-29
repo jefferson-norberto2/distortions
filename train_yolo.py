@@ -17,10 +17,10 @@ for weight in weights:
         task='classify',
         project=weight.split('-')[0],  # Usar o nome do modelo como subpasta
         name=weight.split('-')[1].split('.')[0],
-        epochs=20, 
+        epochs=30, 
         imgsz=512, 
         device=0, 
-        batch=16,
+        batch=32,
         # --- Desativando Augmentations ---
         hsv_h=0.0,      # Ajuste de matiz (hue)
         hsv_s=0.0,      # Ajuste de saturação
