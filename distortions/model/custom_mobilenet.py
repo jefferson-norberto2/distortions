@@ -29,13 +29,4 @@ class CustomMobileNetV3(Module):
         return back
 
     def forward(self, x):
-        # 1. Extrai as bordas/textura
-        edges = self.sobel(x)
-        
-        # 2. Concatena (Junta) as imagens: RGB + Bordas
-        # Dimensão de entrada: [Batch, 3, H, W]
-        # Dimensão combinada: [Batch, 6, H, W]
-        combined = torch.cat([x, edges], dim=1)
-        
-        # 3. Passa para o backbone (que agora aceita 6 canais)
-        return self.backbone(combined)
+        return self.backbone(x)
