@@ -14,11 +14,6 @@ from pathlib import Path
 def train(args: dict):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
-    transform = transforms.Compose([
-        transforms.Resize((args['imgsz'], args['imgsz'])),
-        transforms.ToTensor(),
-        transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
-    ])
     train_path = Path(args['dataset_path']) / 'train'
     val_path = Path(args['dataset_path']) / 'val'
     train_ds = SingleDataset(train_path, image_mode='RGB')
@@ -46,14 +41,23 @@ def train(args: dict):
             
             with torch.amp.autocast('cuda'):
                 outputs = model(x_rgb)
-                loss = criterion(outputs, labels)
+                
+                # Desempacotando as saídas do InceptionOutputs
+                loss1 = criterion(outputs.logits, labels)
+                loss2 = criterion(outputs.aux_logits, labels)
+                
+                # Somando a loss principal com a auxiliar (peso padrão de 0.4)
+                loss = loss1 + 0.4 * loss2
+                
+                # Pegando as predições apenas da saída principal para a acurácia
+                preds = outputs.logits.argmax(1)
             
             scaler.scale(loss).backward()
             scaler.step(optimizer)
             scaler.update()
 
             t_loss += loss.item() * x_rgb.size(0)
-            t_acc += (outputs.argmax(1) == labels).sum().item()
+            t_acc += (preds == labels).sum().item()
             total += labels.size(0)
             pbar.set_postfix(loss=f"{loss.item():.4f}, GPU Memory: {torch.cuda.memory_reserved(device) / 1024**3:.2f} GB")
 
