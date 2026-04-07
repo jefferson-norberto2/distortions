@@ -4,13 +4,13 @@ from torchvision import models
 class CustomResNet(Module):
     def __init__(self, 
                  num_classes: int, 
-                 pre_treined: bool,
+                 pre_trained: bool,
                  backbone: str = 'resnet_50'
                  ):
         
         super(CustomResNet, self).__init__()
     
-        self.backbone = self.get_backbone_and_weights(name_model=backbone, pre_trained=pre_treined)
+        self.backbone = self.get_backbone_and_weights(name_model=backbone, pre_trained=pre_trained)
         
         num_ftrs = self.backbone.fc.in_features
         self.backbone.fc = Linear(num_ftrs, num_classes)
