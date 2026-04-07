@@ -5,7 +5,7 @@ from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 from distortions.utils.progress import BarProgress
 import cv2
 
-base_dir = "runs/test"
+base_dir = "runs/cross_test"
 
 yolo_names = ['yolo26n', 'yolo26s', 'yolo26m', 'yolo26l', 'yolo26x']
 
@@ -27,7 +27,7 @@ for yolo_name in yolo_names:
     model = YOLO(model_path)
 
     # Definições
-    base_path = 'Datasets/LIST/test'
+    base_path = 'Datasets/CSIQ'
     classes = {0: 'awgn', 1: 'blur', 2: 'contrast', 3: 'fnoise', 4: 'jpeg', 5: 'jpeg2000', 6: 'src'}
     class_names = [classes[i] for i in range(len(classes))] 
 

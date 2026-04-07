@@ -124,9 +124,9 @@ if __name__ == "__main__":
 
         for model_name in models:
             args = {
-                "base_path": 'runs/test',
+                "base_path": 'runs/cross_test',
                 "experiment_name": model_name,
-                "dataset_path" : 'Datasets/LIST/test',
+                "dataset_path" : 'Datasets/CSIQ',
                 "weights_path": f'runs/{model_name}/train1/best.pt',
                 "model": CustomInception,
             }
