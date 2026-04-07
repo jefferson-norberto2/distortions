@@ -21,8 +21,8 @@ def train(args: dict):
     ])
     train_path = Path(args['dataset_path']) / 'train'
     val_path = Path(args['dataset_path']) / 'val'
-    train_ds = SingleDataset(train_path, image_mode='RGB')
-    val_ds = SingleDataset(val_path, image_mode='RGB')
+    train_ds = SingleDataset(train_path, image_mode=args['image_mode'])
+    val_ds = SingleDataset(val_path, image_mode=args['image_mode'])
     train_loader = DataLoader(train_ds, batch_size=args['batch'], shuffle=True, num_workers=4)
     val_loader = DataLoader(val_ds, batch_size=args['batch'], shuffle=False, num_workers=4)
     model = CustomMobileNetV3(len(train_ds.class_names), True, args['model']).to(device)
@@ -81,14 +81,20 @@ def train(args: dict):
             logger.save_final_metrics(y_true, y_pred, train_ds.class_names)
 
 if __name__ == "__main__":
-    models = ['mobilenet_v3_small', 'mobilenet_v3_large']
+    models = ['mobilenet_v3_large']
     args = {
         'imgsz': 512, 
         'batch': 32, 
         'epochs': 30, 
         'lr': 1e-5, 
-        'dataset_path': 'Datasets/LIST'
+        'dataset_path': 'Datasets/LIST',
+        'image_mode': 'LAB'
     }
+    for model in models:
+        args['model'] = model
+        train(args)
+
+    args['image_mode'] = 'HSV'
     for model in models:
         args['model'] = model
         train(args)

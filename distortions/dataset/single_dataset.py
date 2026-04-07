@@ -9,9 +9,11 @@ class SingleDataset(CustomDataset):
     def __getitem__(self, idx):
         path, label = self.samples[idx]
 
-        img_rgb = Image.open(path).convert(self.image_mode)
+        img = Image.open(path).convert(self.image_mode)
         
-        if self.transform_rgb:
-            img_rgb = self.transform_rgb(img_rgb)
+        if self.image_mode == 'RGB':
+            img = self.transform_rgb(img)
+        else:
+            img = self.transform_hsv(img)
         
-        return img_rgb, label
+        return img, label
