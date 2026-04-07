@@ -91,7 +91,7 @@ def test(args: dict):
         test_ds = SingleDataset(args['dataset_path'])
         test_loader = DataLoader(test_ds, batch_size=1, shuffle=False, num_workers=4)
         model = CustomMobileNetV3(num_classes=len(test_ds.class_names), pre_trained=False, backbone=args['experiment_name']).to(device)
-        model.load_state_dict(torch.load(args['weights_path'], map_location=device))
+        model.load_state_dict(torch.load(args['weights_path'], map_location=device, weights_only=True))
         model.eval()
 
         v_acc, v_total = 0, 0
