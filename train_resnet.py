@@ -19,7 +19,7 @@ def train(args: dict):
     train_loader = DataLoader(train_ds, batch_size=args['batch'], shuffle=True, num_workers=4)
     val_loader = DataLoader(val_ds, batch_size=args['batch'], shuffle=False, num_workers=4)
     model = CustomResNet(len(train_ds.class_names), True, args['model']).to(device)
-    logger = DualLogger(args, base_dir=f"runs/{args['model']}", train_dataset=train_ds, val_dataset=val_ds)
+    logger = DualLogger(args, base_dir=f"runs/{args['model']}_{args['image_mode']}", train_dataset=train_ds, val_dataset=val_ds)
     
     optimizer = optim.Adam(model.parameters(), lr=args['lr'], weight_decay=1e-4)
 
