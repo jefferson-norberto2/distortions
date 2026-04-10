@@ -77,8 +77,8 @@ for key, inject_function in colors_space.items():
 
         model.train(
             data='Datasets/LIST', 
-            task=f'classify_{key}',
-            project=weight.split('-')[0],  
+            task=f'classify',
+            project=f'{weight.split("-")[0]}_{key}',
             name=weight.split('-')[1].split('.')[0],
             epochs=30, 
             imgsz=512, 
