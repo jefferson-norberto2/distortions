@@ -66,7 +66,7 @@ colors_space = {
     'hsv': inject_hsv
 }
 
-for color_space, inject_function in colors_space.items():
+for key, inject_function in colors_space.items():
 
     for weight in weights:
 
@@ -77,7 +77,7 @@ for color_space, inject_function in colors_space.items():
 
         model.train(
             data='Datasets/LIST', 
-            task='classify',
+            task=f'classify_{key}',
             project=weight.split('-')[0],  
             name=weight.split('-')[1].split('.')[0],
             epochs=30, 
