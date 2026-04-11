@@ -74,17 +74,20 @@ def train(args: dict):
             logger.save_final_metrics(y_true, y_pred, train_ds.class_names)
 
 if __name__ == "__main__":
-    modes = ['LAB', 'HSV']
+    colors = ['LAB', 'HSV']
 
-    for mode in modes:
-        args = {
-            'imgsz': 512, 
-            'batch': 32, 
-            'epochs': 30, 
-            'lr': 1e-5, 
-            'model': 'resnet50', 
-            'dataset_path': 'Datasets/LIST',
-            'image_mode': mode
-        }
-        train(args)
-    
+    models = ['resnet18', 'resnet34', 'resnet101', 'resnet152']
+
+    for model in models:
+        for color in colors:
+            args = {
+                'imgsz': 512, 
+                'batch': 32, 
+                'epochs': 30, 
+                'lr': 1e-5, 
+                'model': model, 
+                'dataset_path': 'Datasets/LIST',
+                'image_mode': color
+            }
+            train(args)
+        

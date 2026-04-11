@@ -81,7 +81,7 @@ def train(args: dict):
             logger.save_final_metrics(y_true, y_pred, train_ds.class_names)
 
 if __name__ == "__main__":
-    models = ['mobilenet_v3_large']
+    models = ['mobilenet_v3_small']
     args = {
         'imgsz': 512, 
         'batch': 32, 
