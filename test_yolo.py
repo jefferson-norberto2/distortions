@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 from distortions.utils.progress import BarProgress
 import cv2
+import numpy as np
 
 yolo_names = ['yolo26n', 'yolo26s', 'yolo26m', 'yolo26l', 'yolo26x']
 colors = ['LAB', 'HSV']
@@ -110,10 +111,24 @@ for dataset_name, dataset_path in datasets.items():
             for text_obj in disp.text_.ravel():
                 if text_obj.get_text() == '0':
                     text_obj.set_text('')
+            
 
             plt.xlabel('True')     
             plt.ylabel('Predicted') 
             plt.savefig(f"{save_dir}/confusion_matrix_yolo.png", dpi=300)
+            
+            cm_normalized = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+            disp_normalized = ConfusionMatrixDisplay(confusion_matrix=cm_normalized, display_labels=class_names)
+            disp_normalized.plot(cmap=plt.cm.Blues)
+
+            for text_obj in disp_normalized.text_.ravel():
+                if text_obj.get_text() == '0.00':
+                    text_obj.set_text('')
+            
+            plt.xlabel('True')     
+            plt.ylabel('Predicted') 
+            plt.savefig(f"{save_dir}/confusion_matrix_yolo_normalized.png", dpi=300)
+            plt.close()
 
             img = cv2.imread(img_path)
             hi, wi, _ = img.shape
