@@ -88,9 +88,9 @@ def test(args: dict):
         print(f"Results will be saved in: {save_path}")
 
         device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-        test_ds = SingleDataset(args['dataset_path'])
+        test_ds = SingleDataset(args['dataset_path'], image_mode=args['image_mode'])
         test_loader = DataLoader(test_ds, batch_size=1, shuffle=False, num_workers=4)
-        model = CustomMobileNetV3(num_classes=len(test_ds.class_names), pre_trained=False, backbone=args['experiment_name']).to(device)
+        model = CustomMobileNetV3(num_classes=len(test_ds.class_names), pre_trained=False, backbone=args['model']).to(device)
         model.load_state_dict(torch.load(args['weights_path'], map_location=device, weights_only=True))
         model.eval()
 
@@ -120,16 +120,24 @@ def test(args: dict):
 
 
 if __name__ == "__main__":
-        models = ['mobilenet_v3_small', 'mobilenet_v3_large']  
+        models = ['mobilenet_v3_small', 'mobilenet_v3_large']
+        colors = ['LAB', 'HSV']
+        datasets = {
+            'test': 'Datasets/LIST/test',
+            'cross_test': 'Datasets/CSIQ',
+        }
 
-        for model_name in models:
-            args = {
-                "base_path": 'runs/cross_test',
-                "experiment_name": model_name,
-                "dataset_path" : 'Datasets/CSIQ',
-                "weights_path": f'runs/{model_name}/train1/best.pt',
-                "model": CustomMobileNetV3.__name__,
-            }
+        for folder_name, dataset_path in datasets.items():
+            for color in colors:
+                for model_name in models:
+                    args = {
+                        "base_path": f'runs/{folder_name}',        
+                        "experiment_name": f"{model_name}_{color}",
+                        "dataset_path" : dataset_path,
+                        "weights_path": f'runs/{model_name}_{color}/train1/best.pt',
+                        "model": model_name,
+                        "image_mode": color,
+                    }
 
-            test(args)
+                test(args)
         
