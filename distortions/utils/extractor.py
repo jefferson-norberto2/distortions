@@ -42,9 +42,11 @@ class Extractor(nn.Module):
         elif name.startswith('mobilenet'):
             self.backbone = get_mobilenet_model(name)
             self.feature_dim = 1000
+        elif name.startswith('inception'):
+            self.backbone = models.inception_v3(weights=models.Inception_V3_Weights.DEFAULT, transform_input=False)
+            self.feature_dim = 2048
         else:
             raise ValueError(f"Modelo {name} não suportado.")
-        
             
         self.backbone.fc = nn.Identity()
 

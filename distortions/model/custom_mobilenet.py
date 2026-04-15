@@ -1,4 +1,3 @@
-import torch
 from torchvision import models
 from torch.nn import Module, Linear
 

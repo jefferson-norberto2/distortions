@@ -8,7 +8,7 @@ import numpy as np
 from torch.utils.data import DataLoader
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 from distortions.dataset.dual_dataset import DualDataset
-from distortions.model.dua_stream_v2 import DualStreamV2
+from distortions.model.dual_stream import DualStream
 from tqdm import tqdm
 
 def generate_confusion_matrix(y_true, y_pred, class_names, save_path):
@@ -92,7 +92,7 @@ def test(args: dict):
         device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         test_ds = DualDataset(args['dataset_path'])
         test_loader = DataLoader(test_ds, batch_size=1, shuffle=True, num_workers=4)
-        model = DualStreamV2(args['head_rgb'], args['head_hsv'], len(test_ds.class_names)).to(device)
+        model = DualStream(args['head_rgb'], args['head_hsv'], len(test_ds.class_names)).to(device)
         model.load_state_dict(torch.load(args['weights_path'], map_location=device))
         model.eval()
 
@@ -127,7 +127,7 @@ if __name__ == "__main__":
         "experiment_name": "dualstreamv2",
         "dataset_path" : 'Datasets/LIVE_RGB',
         "weights_path": 'runs/dual_stream_v2/train6/best.pt',
-        "model": DualStreamV2,
+        "model": DualStream,
         "head_rgb": 'mobilenet_v3_large',
         "head_hsv": 'mobilenet_v3_large',
     }

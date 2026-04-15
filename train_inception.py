@@ -4,7 +4,7 @@ import torch.optim as optim
 
 from tqdm import tqdm
 from torch.utils.data import DataLoader
-from distortions.utils.logger import DualLogger
+from distortions.utils.dual_logger import DualLogger
 from distortions.dataset.single_dataset import SingleDataset
 from distortions.model.custom_inception import CustomInception
 from pathlib import Path
@@ -15,12 +15,12 @@ def train(args: dict):
     
     train_path = Path(args['dataset_path']) / 'train'
     val_path = Path(args['dataset_path']) / 'val'
-    train_ds = SingleDataset(train_path, image_mode='RGB')
-    val_ds = SingleDataset(val_path, image_mode='RGB')
+    train_ds = SingleDataset(train_path, image_mode=args['image_mode'])
+    val_ds = SingleDataset(val_path, image_mode=args['image_mode'])
     train_loader = DataLoader(train_ds, batch_size=args['batch'], shuffle=True, num_workers=4)
     val_loader = DataLoader(val_ds, batch_size=args['batch'], shuffle=False, num_workers=4)
     model = CustomInception(len(train_ds.class_names), True).to(device)
-    logger = DualLogger(args, base_dir=f"runs/{args['model']}", train_dataset=train_ds, val_dataset=val_ds)
+    logger = DualLogger(args, base_dir=f"runs/{args['model']}_{args['image_mode']}", train_dataset=train_ds, val_dataset=val_ds)
     
     optimizer = optim.Adam(model.parameters(), lr=args['lr'], weight_decay=1e-4)
 
@@ -84,13 +84,16 @@ def train(args: dict):
             logger.save_final_metrics(y_true, y_pred, train_ds.class_names)
 
 if __name__ == "__main__":
-    args = {
-        'imgsz': 512, 
-        'batch': 32, 
-        'epochs': 30, 
-        'lr': 1e-5, 
-        'model': 'inception_v3', 
-        'dataset_path': 'Datasets/LIST'
-    }
-    train(args)
-    
+    colors = ['RGB', 'LAB', 'HSV']
+
+    for color in colors:
+        args = {
+             'imgsz': 512, 
+                'batch': 32, 
+                'epochs': 30, 
+                'lr': 1e-5, 
+                'model': 'inception_v3', 
+                'dataset_path': f'Datasets/LIST',
+                'image_mode': color
+        }
+        train(args)

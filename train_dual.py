@@ -5,9 +5,9 @@ import torch.optim as optim
 from tqdm import tqdm
 from torch.utils.data import DataLoader
 from torchvision import transforms
-from distortions.utils.logger import DualLogger
+from distortions.utils.dual_logger import DualLogger
 from distortions.dataset.dual_dataset import DualDataset
-from distortions.model.dua_stream_v2 import DualStreamV2
+from distortions.model.dual_stream import DualStream
 from pathlib import Path
 
 
@@ -25,12 +25,12 @@ def train(args: dict):
     val_ds = DualDataset(val_path, transform=transform)
     train_loader = DataLoader(train_ds, batch_size=args['batch'], shuffle=True, num_workers=4)
     val_loader = DataLoader(val_ds, batch_size=args['batch'], shuffle=False, num_workers=4)
-    model = DualStreamV2(args['model_rgb'], args['model_hsv'], len(train_ds.class_names)).to(device)
+    model = DualStream(args['model_rgb'], args['model_hsv'], len(train_ds.class_names)).to(device)
 
     logger = DualLogger(args, base_dir="runs/dual_stream_v2", train_dataset=train_ds, val_dataset=val_ds)
     
     # 1. Separação dos parâmetros
-    backbone_params = list(model.rgb_arm.parameters()) + list(model.hsv_arm.parameters())
+    backbone_params = list(model.rgb_head.parameters()) + list(model.hsv_head.parameters())
     classifier_params = list(model.classifier.parameters())
 
     # 2. Otimizador com Differential LRs

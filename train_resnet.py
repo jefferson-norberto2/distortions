@@ -4,7 +4,7 @@ import torch.optim as optim
 
 from tqdm import tqdm
 from torch.utils.data import DataLoader
-from distortions.utils.logger import DualLogger
+from distortions.utils.dual_logger import DualLogger
 from distortions.dataset.single_dataset import SingleDataset
 from distortions.model.custom_resnet import CustomResNet
 from pathlib import Path
