@@ -4,7 +4,6 @@ import torch.optim as optim
 
 from tqdm import tqdm
 from torch.utils.data import DataLoader
-from torchvision import transforms
 from distortions.utils.logger import DualLogger
 from distortions.dataset.single_dataset import SingleDataset
 from distortions.model.custom_inception import CustomInception

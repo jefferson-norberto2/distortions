@@ -6,19 +6,16 @@ class CustomInception(Module):
         super().__init__()
         weights = models.Inception_V3_Weights.IMAGENET1K_V1 if pre_trained else None
         
-        # O InceptionV3 cria aux_logits=True por padrão
-        self.backbone = models.inception_v3(weights=weights)
+        # CRITICAL FIX: Set transform_input=False
+        # This prevents the model from double-normalizing your data
+        self.backbone = models.inception_v3(weights=weights, transform_input=False)
 
-        # Troca FC principal
         num_ftrs = self.backbone.fc.in_features
         self.backbone.fc = Linear(num_ftrs, num_classes)
 
-        # Troca FC da cabeça auxiliar
         if self.backbone.AuxLogits is not None:
             num_aux = self.backbone.AuxLogits.fc.in_features
             self.backbone.AuxLogits.fc = Linear(num_aux, num_classes)
 
     def forward(self, x):
-        # O backbone do PyTorch já retorna (logits, aux_logits) no .train() 
-        # e apenas logits no .eval()
         return self.backbone(x)
