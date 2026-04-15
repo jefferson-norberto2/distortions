@@ -37,6 +37,7 @@ def convert_dataset(src_root, target_root, color_space='HSV'):
         
         # Processamento
         img = cv2.imread(str(img_file))
+
         if img is not None:
             converted = cv2.cvtColor(img, conv_code)
             cv2.imwrite(str(dest_file), converted)
@@ -48,8 +49,8 @@ if __name__ == "__main__":
     base_dir = "Datasets/LIST"
     
     # 2. Executa as conversões
-    convert_dataset(base_dir, f"LIST_LAB", color_space='LAB')
-    convert_dataset(base_dir, f"LIST_HSV", color_space='HSV')
+    convert_dataset(base_dir, f"Datasets/LIST_LAB", color_space='LAB')
+    convert_dataset(base_dir, f"Datasets/LIST_HSV", color_space='HSV')
     
     # 3. Mensagem final
     print("\nProcesso concluído! Agora você tem 3 datasets independentes.")
