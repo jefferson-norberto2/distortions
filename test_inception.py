@@ -120,16 +120,24 @@ def test(args: dict):
 
 
 if __name__ == "__main__":
-        models = ['inception_v3',]  
+        models = ['inception_v3']
+        colors = ['LAB', 'HSV']
+        datasets = {
+            'test': 'Datasets/LIST/test',
+            'cross_test': 'Datasets/CSIQ',
+        }
 
-        for model_name in models:
-            args = {
-                "base_path": 'runs/cross_test',
-                "experiment_name": model_name,
-                "dataset_path" : 'Datasets/CSIQ',
-                "weights_path": f'runs/{model_name}/train1/best.pt',
-                "model": CustomInception,
-            }
+        for folder_name, dataset_path in datasets.items():
+            for color in colors:
+                for model_name in models:
+                    args = {
+                        "base_path": f'runs/{folder_name}',        
+                        "experiment_name": f"{model_name}_{color}",
+                        "dataset_path" : dataset_path,
+                        "weights_path": f'runs/{model_name}_{color}/train1/best.pt',
+                        "model": model_name,
+                        "image_mode": color,
+                    }
 
-            test(args)
+                test(args)
         
