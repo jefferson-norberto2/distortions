@@ -4,7 +4,6 @@ import torch.optim as optim
 
 from tqdm import tqdm
 from torch.utils.data import DataLoader
-from torchvision import transforms
 from distortions.utils.dual_logger import DualLogger
 from distortions.dataset.dual_dataset import DualDataset
 from distortions.model.dual_stream import DualStream
@@ -14,18 +13,13 @@ from pathlib import Path
 def train(args: dict):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
-    transform = transforms.Compose([
-        transforms.Resize((args['imgsz'], args['imgsz'])),
-        transforms.ToTensor(),
-        transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
-    ])
     train_path = Path(args['dataset_path']) / 'train'
     val_path = Path(args['dataset_path']) / 'val'
-    train_ds = DualDataset(train_path, transform=transform)
-    val_ds = DualDataset(val_path, transform=transform)
+    train_ds = DualDataset(train_path, image_mode=args['image_mode'])
+    val_ds = DualDataset(val_path, image_mode=args['image_mode'])
     train_loader = DataLoader(train_ds, batch_size=args['batch'], shuffle=True, num_workers=4)
     val_loader = DataLoader(val_ds, batch_size=args['batch'], shuffle=False, num_workers=4)
-    model = DualStream(args['model_rgb'], args['model_hsv'], len(train_ds.class_names)).to(device)
+    model = DualStream(args['model_1'], args['model_2'], len(train_ds.class_names)).to(device)
 
     logger = DualLogger(args, base_dir="runs/dual_stream_v2", train_dataset=train_ds, val_dataset=val_ds)
     
@@ -102,7 +96,8 @@ if __name__ == "__main__":
             'epochs': 30, 
             'lr_backbone': 1e-5, 
             'lr_classifier': 1e-5,
-            'model_rgb': 'mobilenet_v3_large', 
-            'model_hsv': 'mobilenet_v3_large',
-            'dataset_path': 'Datasets/CIST'}
+            'model_1': 'mobilenet_v3_large', 
+            'model_2': 'mobilenet_v3_large',
+            'dataset_path': 'Datasets/CIST',
+            'image_mode': 'HSV'}
     train(args)

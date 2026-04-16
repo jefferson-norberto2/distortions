@@ -3,8 +3,7 @@ from distortions.dataset.custom_dataset import CustomDataset
 
 class SingleDataset(CustomDataset):
     def __init__(self, root, image_mode='RGB'):
-        super().__init__(root)
-        self.image_mode = image_mode
+        super().__init__(root, image_mode=image_mode)
 
     def __getitem__(self, idx):
         path, label = self.samples[idx]
@@ -14,6 +13,6 @@ class SingleDataset(CustomDataset):
         if self.image_mode == 'RGB':
             img = self.transform_rgb(img)
         else:
-            img = self.transform_hsv(img)
+            img = self.transform_changed(img)
         
         return img, label
