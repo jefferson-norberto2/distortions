@@ -66,11 +66,11 @@ def check_predictions(y_true, y_pred, test_ds, save_path, error_table):
             shutil.copy(img_path, f"{error_dir}/{img_name}")
 
             # Add the misclassified image to W&B Table
-            error_table.add_data(
-                wandb.Image(img_path), 
-                true_class, 
-                pred_class
-            )
+            # error_table.add_data(
+            #     wandb.Image(img_path), 
+            #     true_class, 
+            #     pred_class
+            # )
 
 def make_save_dir(args):
     save_path = f"{args['base_path']}/{args['experiment_name']}"
