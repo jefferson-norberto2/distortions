@@ -12,6 +12,7 @@ from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 from distortions.dataset.single_dataset import SingleDataset
 from distortions.model.custom_mobilenet import CustomMobileNet
 from tqdm import tqdm
+from PIL import Image as PILImage
 
 # Load environment variables from .env file (including WANDB_API_KEY)
 load_dotenv()
@@ -66,12 +67,14 @@ def check_predictions(y_true, y_pred, test_ds, save_path, error_table):
             img_name = os.path.basename(img_path)
             shutil.copy(img_path, f"{error_dir}/{img_name}")
 
-            # Add the misclassified image to W&B Table
-            # error_table.add_data(
-            #     wandb.Image(img_path), 
-            #     true_class, 
-            #     pred_class
-            # )
+            img = PILImage.open(img_path)
+            img.thumbnail((256, 256)) 
+
+            error_table.add_data(
+                wandb.Image(img), 
+                true_class, 
+                pred_class
+            )
 
 def make_save_dir(args):
     save_path = f"{args['base_path']}/{args['experiment_name']}"
