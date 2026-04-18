@@ -4,7 +4,6 @@ import torch.optim as optim
 
 from tqdm import tqdm
 from torch.utils.data import DataLoader
-from torchvision import transforms
 from distortions.utils.dual_logger import DualLogger
 from distortions.dataset.single_dataset import SingleDataset
 from distortions.model.custom_mobilenet import CustomMobileNet
@@ -13,12 +12,6 @@ from pathlib import Path
 
 def train(args: dict):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    
-    transform = transforms.Compose([
-        transforms.Resize((args['imgsz'], args['imgsz'])),
-        transforms.ToTensor(),
-        transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
-    ])
     train_path = Path(args['dataset_path']) / 'train'
     val_path = Path(args['dataset_path']) / 'val'
     train_ds = SingleDataset(train_path, image_mode=args['image_mode'])
