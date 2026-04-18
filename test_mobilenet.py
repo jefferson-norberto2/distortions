@@ -177,7 +177,7 @@ def test(args: dict):
 
 
 if __name__ == "__main__":
-    models = ['mobilenet_v3_large', 'mobilenet_v3_small']
+    models = ['mobilenet_v2']
     colors = ['RGB', 'LAB', 'HSV']
     datasets = {
         'test': 'Datasets/LIST/test',
