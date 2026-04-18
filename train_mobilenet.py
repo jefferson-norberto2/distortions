@@ -7,7 +7,7 @@ from torch.utils.data import DataLoader
 from torchvision import transforms
 from distortions.utils.dual_logger import DualLogger
 from distortions.dataset.single_dataset import SingleDataset
-from distortions.model.custom_mobilenet import CustomMobileNetV3
+from distortions.model.custom_mobilenet import CustomMobileNet
 from pathlib import Path
 
 
@@ -25,7 +25,7 @@ def train(args: dict):
     val_ds = SingleDataset(val_path, image_mode=args['image_mode'])
     train_loader = DataLoader(train_ds, batch_size=args['batch'], shuffle=True, num_workers=4)
     val_loader = DataLoader(val_ds, batch_size=args['batch'], shuffle=False, num_workers=4)
-    model = CustomMobileNetV3(len(train_ds.class_names), True, args['model']).to(device)
+    model = CustomMobileNet(len(train_ds.class_names), True, args['model']).to(device)
     logger = DualLogger(args, base_dir=f"runs/{args['model']}_{args['image_mode']}", train_dataset=train_ds, val_dataset=val_ds)
     
     optimizer = optim.Adam(model.parameters(), lr=args['lr'], weight_decay=1e-4)
@@ -81,7 +81,7 @@ def train(args: dict):
             logger.save_final_metrics(y_true, y_pred, train_ds.class_names)
 
 if __name__ == "__main__":
-    models = ['mobilenet_v3_small']
+    models = ['mobilenet_v2']
     args = {
         'imgsz': 512, 
         'batch': 32, 

@@ -171,21 +171,21 @@ if __name__ == "__main__":
             for lvl in range(5):
                 level_name = lvl + 1 # Salvará como 1, 2, 3, 4, 5
                 
-                # # 1. Blur
-                # res_blur = generator.add_gaussian_blur(sigma=levels['blur_sigma'][lvl], force_kernel=None)
-                # generator.save_output(res_blur, "blur", level_name)
+                # 1. Blur
+                res_blur = generator.add_gaussian_blur(sigma=levels['blur_sigma'][lvl], force_kernel=None)
+                generator.save_output(res_blur, "blur", level_name)
 
-                # # 2. Poisson-Gaussian Noise
-                # res_pgn = generator.add_poisson_gaussian_noise(shot_noise=levels['pgn_shot'][lvl], read_noise=levels['pgn_read'][lvl])
-                # generator.save_output(res_pgn, "awgn", level_name)
+                # 2. Poisson-Gaussian Noise
+                res_pgn = generator.add_poisson_gaussian_noise(shot_noise=levels['pgn_shot'][lvl], read_noise=levels['pgn_read'][lvl])
+                generator.save_output(res_pgn, "awgn", level_name)
 
-                # # 3. JPEG
-                # res_jpg = generator.add_jpeg_compression(quality=levels['jpeg_quality'][lvl])
-                # generator.save_output(res_jpg, "jpeg", level_name)
+                # 3. JPEG
+                res_jpg = generator.add_jpeg_compression(quality=levels['jpeg_quality'][lvl])
+                generator.save_output(res_jpg, "jpeg", level_name)
 
-                # # 4. JPEG 2000
-                # res_jp2 = generator.add_jpeg2000_compression(compression_ratio=levels['jp2k_ratio'][lvl])
-                # generator.save_output(res_jp2, "jpeg2000", level_name)
+                # 4. JPEG 2000
+                res_jp2 = generator.add_jpeg2000_compression(compression_ratio=levels['jp2k_ratio'][lvl])
+                generator.save_output(res_jp2, "jpeg2000", level_name)
 
                 # 5. Contrast Decrement
                 res_contrast = generator.change_contrast(alpha=levels['contrast_alpha'][lvl])
