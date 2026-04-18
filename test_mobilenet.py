@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 from torch.utils.data import DataLoader
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 from distortions.dataset.single_dataset import SingleDataset
-from distortions.model.custom_mobilenet import CustomMobileNetV3
+from distortions.model.custom_mobilenet import CustomMobileNet
 from tqdm import tqdm
 
 # Load environment variables from .env file (including WANDB_API_KEY)
@@ -135,7 +135,7 @@ def test(args: dict):
         test_ds = SingleDataset(args['dataset_path'], image_mode=args['image_mode'])
         test_loader = DataLoader(test_ds, batch_size=1, shuffle=False, num_workers=4)
         
-        model = CustomMobileNetV3(num_classes=len(test_ds.class_names), pre_trained=False, backbone=args['model']).to(device)
+        model = CustomMobileNet(num_classes=len(test_ds.class_names), pre_trained=False, backbone=args['model']).to(device)
         model.load_state_dict(torch.load(args['weights_path'], map_location=device, weights_only=True))
         model.eval()
 
