@@ -75,19 +75,17 @@ def train(args: dict):
 
 if __name__ == "__main__":
     models = ['mobilenet_v2']
-    args = {
-        'imgsz': 512, 
-        'batch': 32, 
-        'epochs': 30, 
-        'lr': 1e-5, 
-        'dataset_path': 'Datasets/LIST',
-        'image_mode': 'LAB'
-    }
-    for model in models:
-        args['model'] = model
-        train(args)
+    colors = ['RGB', 'LAB', 'HSV']
 
-    args['image_mode'] = 'HSV'
-    for model in models:
-        args['model'] = model
-        train(args)
+    for color in colors:
+        for model in models:
+            args = {
+                'imgsz': 512, 
+                'batch': 32, 
+                'epochs': 30, 
+                'lr': 1e-5, 
+                'dataset_path': 'Datasets/LIST',
+                'model': model,
+                'image_mode': color
+            }
+            train(args)
