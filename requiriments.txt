@@ -27,6 +27,3 @@ gdown==5.2.0
 # --- Document Parsing (Keep if used directly in your scripts) ---
 beautifulsoup4==4.14.2
 pdfminer.six==20260107
-
-# --- Local Project ---
--e git+https://github.com/jefferson-norberto2/distortions.git@55e5fc94e0d467709e48cadd8d300cb61cc7d796#egg=distortions
