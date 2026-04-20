@@ -7,6 +7,7 @@ from torch.utils.data import DataLoader
 from distortions.dataset.single_dataset import SingleDataset
 from distortions.model.custom_mobilenet import CustomMobileNet
 from distortions.utils.functions import generate_confusion_matrix, check_predictions, save_results_local_and_wandb
+from distortions.utils.hardware import HardwareProfiler
 from tqdm import tqdm
 
 load_dotenv()
@@ -35,6 +36,8 @@ def test(args: dict):
 
         device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         test_ds = SingleDataset(args['dataset_path'], image_mode=args['image_mode'])
+        
+        # Batch size 1 is standard for latency/power inference benchmarking
         test_loader = DataLoader(test_ds, batch_size=1, shuffle=False, num_workers=4)
         
         model = CustomMobileNet(num_classes=len(test_ds.class_names), pre_trained=False, backbone=args['model']).to(device)
@@ -46,12 +49,24 @@ def test(args: dict):
         v_acc, v_total = 0, 0
         y_true, y_pred = [], []
         
+        # Initialize Profiler
+        profiler = HardwareProfiler(device_index=0)
+
+        # Warm-up to avoid initial latency spikes skewing the power/GPU metrics
+        print("Running GPU warm-up...")
+        dummy_input = torch.randn(1, 3, 512, 512).to(device)
+        for _ in range(10):
+            _ = model(dummy_input)
+        
         with torch.no_grad():
             pbar_val = tqdm(test_loader, desc=f"Testing {args['experiment_name']}: ")
             for x_rgb, labels in pbar_val:
                 x_rgb, labels = x_rgb.to(device), labels.to(device)
                 outputs = model(x_rgb)
                 preds = outputs.argmax(1)
+                
+                # Sample hardware metrics during inference
+                profiler.sample()
                 
                 v_acc += (preds == labels).sum().item()
                 v_total += labels.size(0)
@@ -61,6 +76,13 @@ def test(args: dict):
         accuracy = v_acc / v_total * 100
         args['accuracy'] = accuracy
         print(f"Test Accuracy: {accuracy:.2f}%")
+
+        # Save metrics to YAML
+        hw_metrics = profiler.save_to_yaml(save_path)
+        print(f"Hardware metrics saved to {save_path}/hardware_metrics.yaml")
+        
+        # Log hardware metrics to wandb as well, just to have a backup
+        wandb.log({"hardware_averages": hw_metrics})
 
         # Process errors, matrices and metrics
         check_predictions(y_true, y_pred, test_ds, save_path, error_table, wandb)
