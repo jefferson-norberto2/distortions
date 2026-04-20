@@ -74,7 +74,7 @@ def train(args: dict):
             logger.save_final_metrics(y_true, y_pred, train_ds.class_names)
 
 if __name__ == "__main__":
-    models = ['mobilenet_v2']
+    models = ['mobilenet_v1']
     colors = ['RGB', 'LAB', 'HSV']
 
     for color in colors:

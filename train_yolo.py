@@ -8,7 +8,7 @@ weights = [
     'yolo26x-cls.pt'
 ]
 
-colors_space = ['LAB', 'HSV']
+colors_space = ['RGB','LAB', 'HSV']
 
 for color in colors_space:
 
