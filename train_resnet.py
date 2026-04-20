@@ -1,3 +1,5 @@
+import gc
+
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -72,6 +74,10 @@ def train(args: dict):
             best_acc = v_acc/v_total
             torch.save(model.state_dict(), logger.save_dir / "best.pt")
             logger.save_final_metrics(y_true, y_pred, train_ds.class_names)
+    
+    del model, optimizer, train_loader, val_loader, scaler, criterion
+    gc.collect()
+    torch.cuda.empty_cache()
 
 if __name__ == "__main__":
     colors = ['LAB', 'HSV']
