@@ -60,6 +60,13 @@ class HardwareProfiler:
         with open(file_path, 'w') as f:
             yaml.dump(metrics, f, default_flow_style=False, sort_keys=False)
             
-        # Shutdown NVML to free resources
         pynvml.nvmlShutdown()
         return metrics
+    
+    def get_raw_data(self):
+        return {
+            "ram": self.ram_usages,
+            "gpu": self.gpu_utils,
+            "vram": self.vram_usages,
+            "power": self.power_draws
+        }

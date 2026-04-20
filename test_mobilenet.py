@@ -1,6 +1,8 @@
 import os
 import torch
 import wandb
+import yaml
+import gc
 
 from dotenv import load_dotenv
 from torch.utils.data import DataLoader
@@ -13,13 +15,27 @@ from tqdm import tqdm
 load_dotenv()
 
 def make_save_dir(args):
-    save_path = f"{args['base_path']}/{args['experiment_name']}"
+    # Nova estrutura base: runs/mobilenet/V1/test/RGB
+    base = args['base_path']
+    
+    # Adicionamos um controle de execuções dentro da pasta da cor
+    # Isso evita sobrescrever os dados caso você rode o mesmo teste mais de uma vez
     count = 1
+    save_path = f"{base}/run_{count}"
     while os.path.exists(save_path):
-        save_path = f"{args['base_path']}/{args['experiment_name']}_{count}"
         count += 1
+        save_path = f"{base}/run_{count}"
+        
     os.makedirs(save_path, exist_ok=True)
     return save_path
+
+# Função auxiliar para extrair a família e versão do modelo
+def get_model_parts(model_name: str):
+    # "mobilenet_v1" -> "mobilenet", "V1"
+    parts = model_name.split('_', 1)
+    family = parts[0]
+    version = parts[1].upper() if len(parts) > 1 else 'UNKNOWN'
+    return family, version
 
 def test(args: dict):
     project_name = os.getenv("PROJECT_NAME")
@@ -27,7 +43,8 @@ def test(args: dict):
         project=project_name,
         name=args['experiment_name'],
         config=args,
-        reinit=True
+        reinit=True,
+        mode=os.getenv("WANDB_MODE", "online")
     )
 
     try:
@@ -37,7 +54,6 @@ def test(args: dict):
         device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         test_ds = SingleDataset(args['dataset_path'], image_mode=args['image_mode'])
         
-        # Batch size 1 is standard for latency/power inference benchmarking
         test_loader = DataLoader(test_ds, batch_size=1, shuffle=False, num_workers=4)
         
         model = CustomMobileNet(num_classes=len(test_ds.class_names), pre_trained=False, backbone=args['model']).to(device)
@@ -49,10 +65,8 @@ def test(args: dict):
         v_acc, v_total = 0, 0
         y_true, y_pred = [], []
         
-        # Initialize Profiler
         profiler = HardwareProfiler(device_index=0)
 
-        # Warm-up to avoid initial latency spikes skewing the power/GPU metrics
         print("Running GPU warm-up...")
         dummy_input = torch.randn(1, 3, 512, 512).to(device)
         for _ in range(10):
@@ -65,7 +79,6 @@ def test(args: dict):
                 outputs = model(x_rgb)
                 preds = outputs.argmax(1)
                 
-                # Sample hardware metrics during inference
                 profiler.sample()
                 
                 v_acc += (preds == labels).sum().item()
@@ -77,47 +90,109 @@ def test(args: dict):
         args['accuracy'] = accuracy
         print(f"Test Accuracy: {accuracy:.2f}%")
 
-        # Save metrics to YAML
+        # Mantém salvando o local (opcional, mas bom ter)
         hw_metrics = profiler.save_to_yaml(save_path)
-        print(f"Hardware metrics saved to {save_path}/hardware_metrics.yaml")
-        
-        # Log hardware metrics to wandb as well, just to have a backup
         wandb.log({"hardware_averages": hw_metrics})
 
-        # Process errors, matrices and metrics
         check_predictions(y_true, y_pred, test_ds, save_path, error_table, wandb)
         generate_confusion_matrix(y_true, y_pred, test_ds.class_names, save_path, wandb)
         save_results_local_and_wandb(args, test_ds, y_true, y_pred, save_path, accuracy, wandb)
 
         wandb.log({"misclassified_samples": error_table})
 
+        # RETORNA OS DADOS BRUTOS PARA O MAIN
+        return profiler.get_raw_data()
+
     except Exception as e:
         print("An error occurred during testing:", str(e))
+        return None 
     finally:
         wandb.finish()
+        del model 
+        gc.collect()
+        torch.cuda.empty_cache()
 
 
 if __name__ == "__main__":
-    models = ['mobilenet_v1']
+    models = ['mobilenet_v1', 'mobilenet_v2', 'mobilenet_v3_small', 'mobilenet_v3_large']
     colors = ['RGB', 'LAB', 'HSV']
     datasets = {
         'test': 'Datasets/LIST/test',
         'cross_test': 'Datasets/CSIQ',
     }
 
+    # Dicionário para acumular leituras
+    global_hardware_data = {
+        m: {'ram': [], 'gpu': [], 'vram': [], 'power': []} for m in models
+    }
+
     for folder_name, dataset_path in datasets.items():
         for color in colors:
             for model_name in models:
-                experiment_id = f"{folder_name}_{model_name}_{color}"
+                family, version = get_model_parts(model_name)
+                
+                # Montando o novo caminho hierárquico
+                # Exemplo: runs/mobilenet/V1/test/RGB
+                hierarchical_path = f"runs/{family}/{version}/{folder_name}/{color}"
+                
+                experiment_id = f"{version}_{folder_name}_{color}"
                 
                 args = {
-                    "base_path": f'runs/{folder_name}',
+                    "base_path": hierarchical_path,
                     "experiment_name": experiment_id,
                     "dataset_path" : dataset_path,
-                    "weights_path": f'runs/{model_name}_{color}/train1/best.pt',
+                    
+                    # ATENÇÃO AQUI: Seus pesos de treino ainda estão vindo da pasta antiga.
+                    # Se no futuro você mudar a estrutura do loop de treino também, lembre-se de mudar isso!
+                    "weights_path": f'runs/{model_name}_{color}/train1/best.pt', 
+                    
                     "model": model_name,
                     "image_mode": color,
                     "evaluation_folder": folder_name
                 }
 
-                test(args)
+                raw_data = test(args)
+                
+                if raw_data is not None:
+                    global_hardware_data[model_name]['ram'].extend(raw_data['ram'])
+                    global_hardware_data[model_name]['gpu'].extend(raw_data['gpu'])
+                    global_hardware_data[model_name]['vram'].extend(raw_data['vram'])
+                    global_hardware_data[model_name]['power'].extend(raw_data['power'])
+
+    # --- PROCESSAMENTO FINAL GLOBAL POR MODELO ---
+    print("\n--- Generating Global Hardware Reports ---")
+    avg = lambda x: sum(x) / len(x) if x else 0.0
+
+    for model_name, data in global_hardware_data.items():
+        if data['power']: 
+            summary = {
+                "System_RAM_Usage_GB": {
+                    "average": round(avg(data['ram']), 2),
+                    "peak": round(max(data['ram']), 2)
+                },
+                "GPU_Processing_Usage_Percent": {
+                    "average": round(avg(data['gpu']), 2),
+                    "peak": round(max(data['gpu']), 2)
+                },
+                "GPU_VRAM_Allocation_GB": {
+                    "average": round(avg(data['vram']), 2),
+                    "peak": round(max(data['vram']), 2)
+                },
+                "Power_Consumption_Watts": {
+                    "average": round(avg(data['power']), 2),
+                    "peak": round(max(data['power']), 2)
+                }
+            }
+
+            # Descobrindo a pasta do modelo para salvar o global yaml nela
+            family, version = get_model_parts(model_name)
+            model_dir = f"runs/{family}/{version}"
+            os.makedirs(model_dir, exist_ok=True)
+            
+            summary_path = f"{model_dir}/global_hardware_metrics.yaml"
+            
+            # Salvando o arquivo
+            with open(summary_path, 'w') as f:
+                yaml.dump({model_name: summary}, f, default_flow_style=False, sort_keys=False)
+                
+            print(f"[{version}] Global hardware summary saved to: {summary_path}")
