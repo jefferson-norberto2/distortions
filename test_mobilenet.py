@@ -8,18 +8,14 @@ from dotenv import load_dotenv
 from torch.utils.data import DataLoader
 from distortions.dataset.single_dataset import SingleDataset
 from distortions.model.custom_mobilenet import CustomMobileNet
-from distortions.utils.functions import generate_confusion_matrix, check_predictions, save_results_local_and_wandb
+from distortions.utils.functions import generate_confusion_matrix, check_predictions, save_results_local_and_wandb, extract_model_parts
 from distortions.utils.hardware import HardwareProfiler
 from tqdm import tqdm
 
 load_dotenv()
 
 def make_save_dir(args):
-    # Nova estrutura base: runs/mobilenet/V1/test/RGB
     base = args['base_path']
-    
-    # Adicionamos um controle de execuções dentro da pasta da cor
-    # Isso evita sobrescrever os dados caso você rode o mesmo teste mais de uma vez
     count = 1
     save_path = f"{base}/run_{count}"
     while os.path.exists(save_path):
@@ -29,13 +25,6 @@ def make_save_dir(args):
     os.makedirs(save_path, exist_ok=True)
     return save_path
 
-# Função auxiliar para extrair a família e versão do modelo
-def get_model_parts(model_name: str):
-    # "mobilenet_v1" -> "mobilenet", "V1"
-    parts = model_name.split('_', 1)
-    family = parts[0]
-    version = parts[1].upper() if len(parts) > 1 else 'UNKNOWN'
-    return family, version
 
 def test(args: dict):
     project_name = os.getenv("PROJECT_NAME")
@@ -129,11 +118,9 @@ if __name__ == "__main__":
     for folder_name, dataset_path in datasets.items():
         for color in colors:
             for model_name in models:
-                family, version = get_model_parts(model_name)
-                
-                # Montando o novo caminho hierárquico
-                # Exemplo: runs/mobilenet/V1/test/RGB
-                hierarchical_path = f"runs/{family}/{version}/{folder_name}/{color}"
+                family, version = extract_model_parts(model_name)
+
+                hierarchical_path = f"runs/tested/{family}/{version}/{folder_name}/{color}"
                 
                 experiment_id = f"{version}_{folder_name}_{color}"
                 
@@ -141,11 +128,7 @@ if __name__ == "__main__":
                     "base_path": hierarchical_path,
                     "experiment_name": experiment_id,
                     "dataset_path" : dataset_path,
-                    
-                    # ATENÇÃO AQUI: Seus pesos de treino ainda estão vindo da pasta antiga.
-                    # Se no futuro você mudar a estrutura do loop de treino também, lembre-se de mudar isso!
-                    "weights_path": f'runs/{model_name}_{color}/train1/best.pt', 
-                    
+                    "weights_path": f'runs/trained/{family}/{version}/{folder_name}/{color}/train_1/best.pt', 
                     "model": model_name,
                     "image_mode": color,
                     "evaluation_folder": folder_name
@@ -184,9 +167,8 @@ if __name__ == "__main__":
                 }
             }
 
-            # Descobrindo a pasta do modelo para salvar o global yaml nela
-            family, version = get_model_parts(model_name)
-            model_dir = f"runs/{family}/{version}"
+            family, version = extract_model_parts(model_name)
+            model_dir = f"runs/tested/{family}/{version}"
             os.makedirs(model_dir, exist_ok=True)
             
             summary_path = f"{model_dir}/global_hardware_metrics.yaml"

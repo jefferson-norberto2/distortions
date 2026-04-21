@@ -9,6 +9,7 @@ data/
 Datasets/
 runs*/
 *.pt
+*.csv
 
 *.pth
 confusion_matrix*.png
