@@ -5,10 +5,11 @@ from pathlib import Path
 from torch.utils.data import Dataset
 
 class YOLODataset(Dataset):
-    def __init__(self, root_dir: str, target_size: int = 512, image_mode: str = 'RGB'):
+    def __init__(self, root_dir: str, target_size: int = 512, image_mode: str = 'RGB', hardware_evaluation: bool = False):
         self.root_dir = Path(root_dir)
         self.target_size = target_size
         self.image_mode = image_mode
+        self.hardware_evaluation = hardware_evaluation
         self.samples = []
         
         self.class_names = sorted([d.name for d in self.root_dir.iterdir() if d.is_dir()])
@@ -26,6 +27,10 @@ class YOLODataset(Dataset):
 
     def __getitem__(self, index: int) -> tuple[torch.Tensor, int]:
         image_path, label = self.samples[index]
+        
+        if not self.hardware_evaluation:
+            # For accuracy evaluation, we can return the raw image path and label
+            return image_path, label
         
         # Load image (OpenCV reads in BGR format by default)
         image_bgr = cv2.imread(image_path)

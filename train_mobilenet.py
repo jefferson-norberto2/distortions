@@ -80,7 +80,7 @@ def train(args: dict):
     torch.cuda.empty_cache()
 
 if __name__ == "__main__":
-    models = ['mobilenet_V1', 'mobilenet_V2', 'mobilenet_V3_SMALL', 'mobilenet_V3_LARGE']
+    models = ['mobilenet_V1', 'mobilenet_V2', 'mobilenet_V3_small', 'mobilenet_V3_large']
     colors = ['RGB', 'LAB', 'HSV']
 
     for color in colors:

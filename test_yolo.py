@@ -38,13 +38,18 @@ def test(args: dict):
     )
 
     try:
+        if not args['hardware_evaluation']:
+            if args['image_mode'] == 'LAB':
+                args['dataset_path'] = args['dataset_path'].replace('LIST', 'LIST_LAB').replace('CSIQ', 'CSIQ_LAB')
+            elif args['image_mode'] == 'HSV':
+                args['dataset_path'] = args['dataset_path'].replace('LIST', 'LIST_HSV').replace('CSIQ', 'CSIQ_HSV')
+
         save_path = make_save_dir(args)
         print(f"Results will be saved in: {save_path}")
-
         device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-        test_ds = YOLODataset(args['dataset_path'], image_mode=args['image_mode'])
-        
+        test_ds = YOLODataset(args['dataset_path'], image_mode=args['image_mode'], hardware_evaluation=args['hardware_evaluation'])
         test_loader = DataLoader(test_ds, batch_size=1, shuffle=False, num_workers=4)
+
         
         model = YOLO(args['weights_path'])
         model.to(device)
@@ -65,8 +70,13 @@ def test(args: dict):
         with torch.no_grad():
             pbar_val = tqdm(test_loader, desc=f"Testing {args['experiment_name']}: ")
             for x_rgb, labels in pbar_val:
-                x_rgb, labels = x_rgb.to(device), labels.to(device)
+                labels = labels.to(device)
                 
+                # Check if x_rgb is a tensor before moving to device
+                # If it's a tuple of paths, YOLO can handle it directly
+                if isinstance(x_rgb, torch.Tensor):
+                    x_rgb = x_rgb.to(device)
+                    
                 # Coleta hardware a cada imagem processada
                 profiler.sample()
                 
@@ -109,7 +119,7 @@ def test(args: dict):
 
 if __name__ == "__main__":
     models = ['yolo26n', 'yolo26s', 'yolo26m', 'yolo26l', 'yolo26x']
-    colors = ['RGB', 'LAB', 'HSV']
+    colors = ['LAB', 'HSV']
     datasets = {
         'test': 'Datasets/LIST/test',
         'cross_test': 'Datasets/CSIQ',
@@ -124,17 +134,18 @@ if __name__ == "__main__":
             for model_name in models:
                 family, version = extract_model_parts(model_name)
 
-                hierarchical_path = f"runs/tested/{family}/{version}/{folder_name}/{color}"
+                hierarchical_path = f"runs/tested2/{family}/{version}/{folder_name}/{color}"
                 experiment_id = f"{version}_{folder_name}_{color}"
                 
                 args = {
                     "base_path": hierarchical_path,
                     "experiment_name": experiment_id,
                     "dataset_path" : dataset_path,
-                    "weights_path": f'runs/trained/{family}/{version}/{color}/train_1/best.pt', 
+                    "weights_path": f'runs/trained/{family}/{version}/{color}/best.pt', 
                     "model": model_name,
                     "image_mode": color,
-                    "evaluation_folder": folder_name
+                    "evaluation_folder": folder_name,
+                    "hardware_evaluation": False
                 }
 
                 raw_data = test(args)
@@ -171,7 +182,7 @@ if __name__ == "__main__":
             }
 
             family, version = extract_model_parts(model_name)
-            model_dir = f"runs/tested/{family}/{version}"
+            model_dir = f"runs/tested2/{family}/{version}"
             os.makedirs(model_dir, exist_ok=True)
             
             summary_path = f"{model_dir}/global_hardware_metrics.yaml"

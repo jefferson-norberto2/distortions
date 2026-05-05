@@ -144,16 +144,19 @@ def save_results_local_and_wandb(args, test_ds, y_true, y_pred, save_path, accur
 def extract_model_parts(model_name: str):
     if 'mobilenet' in model_name.lower():
         family = 'mobilenet'
-        parts = model_name.split('_', 1)
-        version = parts[1].upper()
+        parts = model_name.split('_')
+        version = ''
+        for i in range(1, len(parts)):
+            version += parts[i]
+            version += '_' if parts[i] != parts[-1] else ''            
     elif 'yolo' in model_name.lower():
         family = 'yolo'
         parts = model_name.split(family, 1)
-        version = parts[1].upper()
+        version = parts[1]
     elif 'resnet' in model_name.lower():
         family = 'resnet'
         parts = model_name.split(family, 1)
-        version = parts[1].upper()
+        version = parts[1]
     else:
         raise ValueError(f"Model name '{model_name}' does not match expected patterns for MobileNet, YOLO, or ResNet.")
         
