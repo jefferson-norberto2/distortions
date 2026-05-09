@@ -2,8 +2,8 @@ from PIL import Image
 from distortions.dataset.custom_dataset import CustomDataset
 
 class SingleDataset(CustomDataset):
-    def __init__(self, root, image_mode='RGB'):
-        super().__init__(root, image_mode=image_mode)
+    def __init__(self, root, image_mode='RGB', image_size=(512, 512)):
+        super().__init__(root, image_mode=image_mode, image_size=image_size)
 
     def __getitem__(self, idx):
         path, label = self.samples[idx]

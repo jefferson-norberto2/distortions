@@ -1,26 +1,29 @@
 from ultralytics import YOLO
+from distortions.utils.functions import extract_model_parts
 
-weights = [
-    'yolo26n-cls.pt',
-    'yolo26s-cls.pt',
-    'yolo26m-cls.pt',
-    'yolo26l-cls.pt',
-    'yolo26x-cls.pt'
-]
+models = {
+    'yolo26n': 'yolo26n-cls.pt',
+    'yolo26s': 'yolo26s-cls.pt',
+    'yolo26m': 'yolo26m-cls.pt',
+    'yolo26l': 'yolo26l-cls.pt',
+    'yolo26x': 'yolo26x-cls.pt'
+}
 
 colors_space = ['RGB','LAB', 'HSV']
 
 for color in colors_space:
 
-    for weight in weights:
+    for model, weight in models.items():
 
-        model = YOLO(weight)  
+        model = YOLO(weight)
+        family, version = extract_model_parts(model)
+        print(f"Training {family}{version} on color space {color}")
 
         model.train(
             data=f'Datasets/LIST_{color}', 
             task='classify',
-            project=f'{weight.split("-")[0]}_{color}',
-            name=weight.split('-')[1].split('.')[0],
+            project=f'{family}/{version}/{color}',
+            name='train',
             epochs=30, 
             imgsz=512, 
             device=0, 

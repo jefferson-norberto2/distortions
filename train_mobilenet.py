@@ -8,8 +8,8 @@ from torch.utils.data import DataLoader
 from distortions.utils.dual_logger import DualLogger
 from distortions.dataset.single_dataset import SingleDataset
 from distortions.model.custom_mobilenet import CustomMobileNet
+from distortions.utils.functions import extract_model_parts
 from pathlib import Path
-
 
 def train(args: dict):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -20,7 +20,8 @@ def train(args: dict):
     train_loader = DataLoader(train_ds, batch_size=args['batch'], shuffle=True, num_workers=4)
     val_loader = DataLoader(val_ds, batch_size=args['batch'], shuffle=False, num_workers=4)
     model = CustomMobileNet(len(train_ds.class_names), True, args['model']).to(device)
-    logger = DualLogger(args, base_dir=f"runs/{args['model']}_{args['image_mode']}", train_dataset=train_ds, val_dataset=val_ds)
+    family, version = extract_model_parts(args['model'])
+    logger = DualLogger(args, base_dir=f"runs/trained/{family}/{version}/{args['image_mode']}/train", train_dataset=train_ds, val_dataset=val_ds)
     
     optimizer = optim.Adam(model.parameters(), lr=args['lr'], weight_decay=1e-4)
 
@@ -79,7 +80,7 @@ def train(args: dict):
     torch.cuda.empty_cache()
 
 if __name__ == "__main__":
-    models = ['mobilenet_v1']
+    models = ['mobilenet_V1', 'mobilenet_V2', 'mobilenet_V3_small', 'mobilenet_V3_large']
     colors = ['RGB', 'LAB', 'HSV']
 
     for color in colors:
