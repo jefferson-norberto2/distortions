@@ -2,8 +2,8 @@ from PIL import Image
 from distortions.dataset.custom_dataset import CustomDataset
 
 class DualDataset(CustomDataset):
-    def __init__(self, root, image_mode='HSV'):
-        super().__init__(root, image_mode=image_mode)
+    def __init__(self, root='path', image_mode='HSV', image_size=(256, 256)):
+        super().__init__(root, image_mode=image_mode, image_size=image_size)
 
     def __getitem__(self, idx):
         path, label = self.samples[idx]

@@ -19,7 +19,7 @@ def train(args: dict):
     val_ds = DualDataset(val_path, image_mode=args['image_mode'])
     train_loader = DataLoader(train_ds, batch_size=args['batch'], shuffle=True, num_workers=4)
     val_loader = DataLoader(val_ds, batch_size=args['batch'], shuffle=False, num_workers=4)
-    model = DualStream(args['model_1'], args['model_2'], len(train_ds.class_names)).to(device)
+    model = DualStream(args['rgb_head'], args['hsv_head'], len(train_ds.class_names)).to(device)
 
     logger = DualLogger(args, base_dir="runs/dual_stream_v2", train_dataset=train_ds, val_dataset=val_ds)
     
@@ -45,7 +45,11 @@ def train(args: dict):
     scaler = torch.amp.GradScaler('cuda')
 
     best_acc = 0
+    # Definir o device type para o autocast dinâmico
+    device_type = 'cuda' if torch.cuda.is_available() else 'cpu'
+
     for epoch in range(args['epochs']):
+        # ================== TREINO ==================
         model.train()
         t_loss, t_acc, total = 0, 0, 0
         pbar = tqdm(train_loader, desc=f"Epoch {epoch+1}/{args['epochs']}")
@@ -54,41 +58,58 @@ def train(args: dict):
             x_rgb, x_hsv, labels = x_rgb.to(device), x_hsv.to(device), labels.to(device)
             optimizer.zero_grad()
             
-            with torch.amp.autocast('cuda'):
+            # Autocast dinâmico no Treino
+            with torch.amp.autocast(device_type):
                 outputs = model(x_rgb, x_hsv)
                 loss = criterion(outputs, labels)
             
             scaler.scale(loss).backward()
+            
+            # Prevenção de explosão de gradiente (Gradient Clipping)
+            scaler.unscale_(optimizer) 
+            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+            
             scaler.step(optimizer)
             scaler.update()
 
             t_loss += loss.item() * x_rgb.size(0)
             t_acc += (outputs.argmax(1) == labels).sum().item()
             total += labels.size(0)
-            pbar.set_postfix(loss=f"{loss.item():.4f}, GPU Memory: {torch.cuda.memory_reserved(device) / 1024**3:.2f} GB")
+            
+            mem_info = f", VRAM: {torch.cuda.memory_reserved(device) / 1024**3:.2f}GB" if device_type == 'cuda' else ""
+            pbar.set_postfix(loss=f"{loss.item():.4f}{mem_info}")
 
-        # Validação
+        # ================== VALIDAÇÃO ==================
         model.eval()
         v_loss, v_acc, v_total = 0, 0, 0
         y_true, y_pred = [], []
+        
         with torch.no_grad():
-            pbar_val = tqdm(val_loader, desc="Validing: ")
+            pbar_val = tqdm(val_loader, desc="Validating: ") # Corrigido typo "Validing"
             for x_rgb, x_hsv, labels in pbar_val:
                 x_rgb, x_hsv, labels = x_rgb.to(device), x_hsv.to(device), labels.to(device)
-                outputs = model(x_rgb, x_hsv)
-                v_loss += criterion(outputs, labels).item() * x_rgb.size(0)
+                
+                # Otimização crucial: Autocast também na validação!
+                with torch.amp.autocast(device_type):
+                    outputs = model(x_rgb, x_hsv)
+                    loss = criterion(outputs, labels)
+                
+                v_loss += loss.item() * x_rgb.size(0)
                 preds = outputs.argmax(1)
                 v_acc += (preds == labels).sum().item()
                 v_total += labels.size(0)
-                y_true.extend(labels.cpu().numpy()); y_pred.extend(preds.cpu().numpy())
+                y_true.extend(labels.cpu().numpy())
+                y_pred.extend(preds.cpu().numpy())
 
-        scheduler.step()
+        # ================== MÉTRICAS E SALVAMENTO ==================
+        scheduler.step() # Atualiza o LR no final da época inteira
         logger.log_epoch(epoch, t_loss/total, v_loss/v_total, t_acc/total, v_acc/v_total)
         
         if (v_acc/v_total) > best_acc:
             best_acc = v_acc/v_total
             torch.save(model.state_dict(), logger.save_dir / "best.pt")
             logger.save_final_metrics(y_true, y_pred, train_ds.class_names)
+            print(f"🌟 New best model! Accuracy: {best_acc:.4f}")
 
 if __name__ == "__main__":
     args = {'imgsz': 512, 
@@ -96,8 +117,8 @@ if __name__ == "__main__":
             'epochs': 30, 
             'lr_backbone': 1e-5, 
             'lr_classifier': 1e-5,
-            'model_1': 'mobilenet_v3_large', 
-            'model_2': 'mobilenet_v3_large',
-            'dataset_path': 'Datasets/CIST',
+            'rgb_head': 'resnet50', 
+            'hsv_head': 'mobilenet_v1',
+            'dataset_path': 'Datasets/LIST',
             'image_mode': 'HSV'}
     train(args)
