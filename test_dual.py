@@ -61,13 +61,13 @@ def test(args: dict):
         print("Running GPU warm-up...")
         dummy_input = torch.randn(1, 3, 512, 512).to(device)
         for _ in range(10):
-            _ = model(dummy_input)
+            _ = model(dummy_input, dummy_input)
         
         with torch.no_grad():
             pbar_val = tqdm(test_loader, desc=f"Testing {args['experiment_name']}: ")
-            for x_rgb, labels in pbar_val:
-                x_rgb, labels = x_rgb.to(device), labels.to(device)
-                outputs = model(x_rgb)
+            for x_rgb, x_hsv, labels in pbar_val:
+                x_rgb, x_hsv, labels = x_rgb.to(device), x_hsv.to(device), labels.to(device)
+                outputs = model(x_rgb, x_hsv)
                 preds = outputs.argmax(1)
                 
                 profiler.sample()
