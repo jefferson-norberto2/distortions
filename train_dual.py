@@ -24,17 +24,14 @@ def train(args: dict):
 
     logger = DualLogger(args, base_dir="runs/trained/{FAMILY}/{VERSION}/train_1", train_dataset=train_ds, val_dataset=val_ds)
     
-    # 1. Separação dos parâmetros
     backbone_params = list(model.rgb_head.parameters()) + list(model.hsv_head.parameters())
     classifier_params = list(model.classifier.parameters())
 
-    # 2. Otimizador com Differential LRs
     optimizer = optim.AdamW([
         {'params': backbone_params, 'lr': args['lr_backbone']},
         {'params': classifier_params, 'lr': args['lr_classifier']}
     ], weight_decay=1e-2)
 
-    # 3. Scheduler com limite mínimo (eta_min)
     # T_max é o número total de épocas. eta_min garante que a rede nunca pare 100% de aprender.
     scheduler = optim.lr_scheduler.CosineAnnealingLR(
         optimizer, 
@@ -46,7 +43,6 @@ def train(args: dict):
     scaler = torch.amp.GradScaler('cuda')
 
     best_acc = 0
-    # Definir o device type para o autocast dinâmico
     device_type = 'cuda' if torch.cuda.is_available() else 'cpu'
 
     for epoch in range(args['epochs']):
@@ -59,14 +55,12 @@ def train(args: dict):
             x_rgb, x_hsv, labels = x_rgb.to(device), x_hsv.to(device), labels.to(device)
             optimizer.zero_grad()
             
-            # Autocast dinâmico no Treino
             with torch.amp.autocast(device_type):
                 outputs = model(x_rgb, x_hsv)
                 loss = criterion(outputs, labels)
             
             scaler.scale(loss).backward()
             
-            # Prevenção de explosão de gradiente (Gradient Clipping)
             scaler.unscale_(optimizer) 
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
             
@@ -86,11 +80,10 @@ def train(args: dict):
         y_true, y_pred = [], []
         
         with torch.no_grad():
-            pbar_val = tqdm(val_loader, desc="Validating: ") # Corrigido typo "Validing"
+            pbar_val = tqdm(val_loader, desc="Validating: ")
             for x_rgb, x_hsv, labels in pbar_val:
                 x_rgb, x_hsv, labels = x_rgb.to(device), x_hsv.to(device), labels.to(device)
                 
-                # Otimização crucial: Autocast também na validação!
                 with torch.amp.autocast(device_type):
                     outputs = model(x_rgb, x_hsv)
                     loss = criterion(outputs, labels)
@@ -103,7 +96,7 @@ def train(args: dict):
                 y_pred.extend(preds.cpu().numpy())
 
         # ================== MÉTRICAS E SALVAMENTO ==================
-        scheduler.step() # Atualiza o LR no final da época inteira
+        scheduler.step()
         logger.log_epoch(epoch, t_loss/total, v_loss/v_total, t_acc/total, v_acc/v_total)
         
         if (v_acc/v_total) > best_acc:

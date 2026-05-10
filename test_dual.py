@@ -43,7 +43,7 @@ def test(args: dict):
         print(f"Results will be saved in: {save_path}")
 
         device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-        test_ds = DualDataset(args['dataset_path'], image_mode=args['image_mode'], image_size=args['imgsz'])
+        test_ds = DualDataset(args['dataset_path'], image_mode=args['image_mode'], image_size=(args['imgsz'], args['imgsz']))
         
         test_loader = DataLoader(test_ds, batch_size=1, shuffle=False, num_workers=4)
         
@@ -108,8 +108,8 @@ if __name__ == "__main__":
     models = ['dual_stream']
     colors = ['HSV']
     datasets = {
-        'test': 'Datasets/LIST/test',
-        'cross_test': 'Datasets/CSIQ',
+        'test': '/run/media/jmn/Removable Disk/Datasets/LIST/test',
+        'cross_test': '/run/media/jmn/Removable Disk/Datasets/CSIQ',
     }
 
     # Dicionário para acumular leituras

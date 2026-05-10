@@ -43,7 +43,10 @@ class DualStream(nn.Module):
         feat_rgb = self.norm_rgb(self.rgb_head(img_rgb))
         feat_hsv = self.norm_hsv(self.hsv_head(img_hsv))
 
-        features = cat((feat_rgb, feat_hsv), dim=1)
+        norm_feat_rgb = self.norm_rgb(feat_rgb)
+        norm_feat_hsv = self.norm_hsv(feat_hsv)
+
+        features = cat((norm_feat_rgb, norm_feat_hsv), dim=1)
         return self.classifier(features)
     
     @classmethod
