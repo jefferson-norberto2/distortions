@@ -9,6 +9,7 @@ from distortions.dataset.dual_dataset import DualDataset
 from distortions.model.dual_stream import DualStream
 from pathlib import Path
 
+FAMILY, VERSION = "dual_stream", "v1"
 
 def train(args: dict):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -21,7 +22,7 @@ def train(args: dict):
     val_loader = DataLoader(val_ds, batch_size=args['batch'], shuffle=False, num_workers=4)
     model = DualStream(args['rgb_head'], args['hsv_head'], len(train_ds.class_names)).to(device)
 
-    logger = DualLogger(args, base_dir="runs/dual_stream_v2", train_dataset=train_ds, val_dataset=val_ds)
+    logger = DualLogger(args, base_dir="runs/trained/{FAMILY}/{VERSION}/train_1", train_dataset=train_ds, val_dataset=val_ds)
     
     # 1. Separação dos parâmetros
     backbone_params = list(model.rgb_head.parameters()) + list(model.hsv_head.parameters())
