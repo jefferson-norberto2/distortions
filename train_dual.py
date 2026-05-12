@@ -24,8 +24,8 @@ def train(args: dict):
 
     logger = DualLogger(args, base_dir=f"runs/trained/{FAMILY}/{VERSION}", train_dataset=train_ds, val_dataset=val_ds)
     
-    backbone_params = list(model.rgb_head.parameters()) + list(model.hsv_head.parameters()) + list(model.parameters())
-    classifier_params = list(model.classifier.parameters())
+    backbone_params = list(model.rgb_head.parameters()) + list(model.hsv_head.parameters())
+    classifier_params = list(model.classifier.parameters()) + list(model.norm_rgb.parameters()) + list(model.norm_hsv.parameters())
 
     optimizer = optim.AdamW([
         {'params': backbone_params, 'lr': args['lr_backbone']},
