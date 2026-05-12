@@ -22,7 +22,7 @@ def train(args: dict):
     val_loader = DataLoader(val_ds, batch_size=args['batch'], shuffle=False, num_workers=4)
     model = DualStream(args['rgb_head'], args['hsv_head'], len(train_ds.class_names)).to(device)
 
-    logger = DualLogger(args, base_dir="runs/trained/{FAMILY}/{VERSION}/train_1", train_dataset=train_ds, val_dataset=val_ds)
+    logger = DualLogger(args, base_dir=f"runs/trained/{FAMILY}/{VERSION}/train_1", train_dataset=train_ds, val_dataset=val_ds)
     
     backbone_params = list(model.rgb_head.parameters()) + list(model.hsv_head.parameters())
     classifier_params = list(model.classifier.parameters())
@@ -40,7 +40,6 @@ def train(args: dict):
     )
     
     criterion = nn.CrossEntropyLoss()
-    scaler = torch.amp.GradScaler('cuda')
 
     best_acc = 0
     device_type = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -55,17 +54,15 @@ def train(args: dict):
             x_rgb, x_hsv, labels = x_rgb.to(device), x_hsv.to(device), labels.to(device)
             optimizer.zero_grad()
             
-            with torch.amp.autocast(device_type):
-                outputs = model(x_rgb, x_hsv)
-                loss = criterion(outputs, labels)
+            outputs = model(x_rgb, x_hsv)
+            loss = criterion(outputs, labels)
             
-            scaler.scale(loss).backward()
+            loss.backward()
             
-            scaler.unscale_(optimizer) 
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
             
-            scaler.step(optimizer)
-            scaler.update()
+            optimizer.step()
+            optimizer.zero_grad()
 
             t_loss += loss.item() * x_rgb.size(0)
             t_acc += (outputs.argmax(1) == labels).sum().item()
@@ -84,9 +81,8 @@ def train(args: dict):
             for x_rgb, x_hsv, labels in pbar_val:
                 x_rgb, x_hsv, labels = x_rgb.to(device), x_hsv.to(device), labels.to(device)
                 
-                with torch.amp.autocast(device_type):
-                    outputs = model(x_rgb, x_hsv)
-                    loss = criterion(outputs, labels)
+                outputs = model(x_rgb, x_hsv)
+                loss = criterion(outputs, labels)
                 
                 v_loss += loss.item() * x_rgb.size(0)
                 preds = outputs.argmax(1)
@@ -111,8 +107,8 @@ if __name__ == "__main__":
             'epochs': 30, 
             'lr_backbone': 1e-5, 
             'lr_classifier': 1e-5,
-            'rgb_head': 'resnet50', 
+            'rgb_head': 'mobilenet_v1', 
             'hsv_head': 'mobilenet_v1',
-            'dataset_path': 'Datasets/LIST',
+            'dataset_path': '/run/media/jmn/Removable Disk/Datasets/LIST',
             'image_mode': 'HSV'}
     train(args)
