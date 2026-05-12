@@ -20,23 +20,12 @@ class DualStream(nn.Module):
 
         # Gradual reduction
         hidden_dim1 = dim_total // 2
-        hidden_dim2 = hidden_dim1 // 2
-        hidden_dim3 = hidden_dim2 // 2
 
         self.classifier = nn.Sequential(
             nn.Linear(dim_total, hidden_dim1),
-            nn.BatchNorm1d(hidden_dim1),
             nn.ReLU(),
             nn.Dropout(0.5),
-            nn.Linear(hidden_dim1, hidden_dim2),
-            nn.BatchNorm1d(hidden_dim2),
-            nn.ReLU(),
-            nn.Dropout(0.5),
-            nn.Linear(hidden_dim2, hidden_dim3),
-            nn.BatchNorm1d(hidden_dim3),
-            nn.ReLU(),
-            nn.Dropout(0.5),
-            nn.Linear(hidden_dim3, num_classes)
+            nn.Linear(hidden_dim1, num_classes),
         )
 
     def forward(self, img_rgb, img_hsv):

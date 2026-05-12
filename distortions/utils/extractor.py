@@ -1,5 +1,6 @@
 from torch import nn, randn
 from torchvision import models
+import timm
 
 def get_resnet_model(name):
     resnet_models = {
@@ -14,15 +15,20 @@ def get_resnet_model(name):
     model_func, weights = resnet_models[name]
     return model_func(weights=weights)
 
-def get_mobilenet_model(name):
+def get_mobilenet_model(name: str):
     mobilenet_models = {
-        'mobilenet_v1': (models.mobilenet_v2, models.MobileNet_V2_Weights.DEFAULT), # Adaptado caso use v2 no lugar de v1
         'mobilenet_v2': (models.mobilenet_v2, models.MobileNet_V2_Weights.DEFAULT),
         'mobilenet_v3_small': (models.mobilenet_v3_small, models.MobileNet_V3_Small_Weights.DEFAULT),
         'mobilenet_v3_large': (models.mobilenet_v3_large, models.MobileNet_V3_Large_Weights.DEFAULT),
     }
-    if name not in mobilenet_models:
+    
+    if name.lower() == 'mobilenet_v1':
+        backbone_model = timm.create_model('mobilenetv1_100', pretrained=True)
+        return backbone_model
+    
+    if name.lower() not in mobilenet_models:
         raise ValueError(f"Modelo {name} não suportado.")
+    
     model_func, weights = mobilenet_models[name]
     return model_func(weights=weights)
 

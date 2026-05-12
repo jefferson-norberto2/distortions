@@ -22,9 +22,9 @@ def train(args: dict):
     val_loader = DataLoader(val_ds, batch_size=args['batch'], shuffle=False, num_workers=4)
     model = DualStream(args['rgb_head'], args['hsv_head'], len(train_ds.class_names)).to(device)
 
-    logger = DualLogger(args, base_dir=f"runs/trained/{FAMILY}/{VERSION}/train_1", train_dataset=train_ds, val_dataset=val_ds)
+    logger = DualLogger(args, base_dir=f"runs/trained/{FAMILY}/{VERSION}", train_dataset=train_ds, val_dataset=val_ds)
     
-    backbone_params = list(model.rgb_head.parameters()) + list(model.hsv_head.parameters())
+    backbone_params = list(model.rgb_head.parameters()) + list(model.hsv_head.parameters()) + list(model.parameters())
     classifier_params = list(model.classifier.parameters())
 
     optimizer = optim.AdamW([
@@ -107,8 +107,8 @@ if __name__ == "__main__":
             'epochs': 30, 
             'lr_backbone': 1e-5, 
             'lr_classifier': 1e-5,
-            'rgb_head': 'mobilenet_v1', 
+            'rgb_head': 'resnet50', 
             'hsv_head': 'mobilenet_v1',
-            'dataset_path': '/run/media/jmn/Removable Disk/Datasets/LIST',
+            'dataset_path': 'Datasets/LIST',
             'image_mode': 'HSV'}
     train(args)
