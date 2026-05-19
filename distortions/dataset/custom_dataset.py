@@ -5,6 +5,7 @@ from abc import ABC, abstractmethod
 
 class CustomDataset(Dataset, ABC):
     def __init__(self, root: str, image_mode='RGB', image_size=(512, 512)):
+        self.root = root
         self.samples = []
         self.class_names = sorted([d.name for d in Path(root).iterdir() if d.is_dir()])
         self.class_to_idx = {name: i for i, name in enumerate(self.class_names)}
@@ -35,3 +36,13 @@ class CustomDataset(Dataset, ABC):
     @abstractmethod
     def __getitem__(self, idx):
         pass
+    
+    def update_classes(self, classes: list):
+        self.class_names = classes
+        self.class_to_idx = {name: i for i, name in enumerate(self.class_names)}
+        self.samples = []
+        for cls_name in self.class_names:
+            cls_path = Path(self.root) / cls_name
+            for img_path in cls_path.glob('*'):
+                if img_path.suffix.lower() in ['.jpg', '.jpeg', '.png', '.bmp']:
+                    self.samples.append((str(img_path), self.class_to_idx[cls_name]))

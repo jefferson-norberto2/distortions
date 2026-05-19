@@ -15,4 +15,4 @@ class SingleDataset(CustomDataset):
         else:
             img = self.transform_changed(img)
         
-        return img, label
+        return img, label        

@@ -108,8 +108,8 @@ if __name__ == "__main__":
     models = ['dual_stream']
     colors = ['HSV']
     datasets = {
-        'test': '/run/media/jmn/Removable Disk/Datasets/LIST/test',
-        'cross_test': '/run/media/jmn/Removable Disk/Datasets/CSIQ',
+        'test': '/media/jmn/Removable Disk/Datasets/LIST/test',
+        'cross_test': '/media/jmn/Removable Disk/Datasets/CSIQ',
     }
 
     # Dicionário para acumular leituras
@@ -130,11 +130,11 @@ if __name__ == "__main__":
                     "base_path": hierarchical_path,
                     "experiment_name": experiment_id,
                     "dataset_path" : dataset_path,
-                    "weights_path": "runs/trained/dual_stream/v1/train4/best.pt", 
+                    "weights_path": "runs/trained/dual_stream/v1/train1/best.pt", 
                     "model": model_name,
                     "image_mode": color,
                     "evaluation_folder": folder_name,
-                    "args_path": "runs/trained/dual_stream/v1/train4/args.yaml"
+                    "args_path": "runs/trained/dual_stream/v1/train1/args.yaml"
                 }
 
 
