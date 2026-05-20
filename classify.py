@@ -14,7 +14,7 @@ dirs = ['Macro', 'Dark', 'Indoor', 'Outdoor', 'NightVision']
 for d in dirs:
     root_dir = f'/run/media/jmn/Removable Disk/database/{d}'
     args_path = '/run/media/jmn/Removable Disk/runs/trained/mobilenet/V1/HSV/args.yaml'
-    dataset_save_path = f'Datasets/Wild_v2/{d}_v3'
+    dataset_save_path = f'Datasets/Wild_v2/{d}'
 
     os.makedirs(dataset_save_path, exist_ok=True)
 
@@ -27,17 +27,11 @@ for d in dirs:
     for class_name in class_names:
         os.makedirs(os.path.join(dataset_save_path, class_name), exist_ok=True)
 
-    normalize_transform = transforms.Compose([
-        transforms.Resize((512, 512)),
-        transforms.ToTensor(),
-        #transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])
-    ])
-
     for img_name in tqdm(os.listdir(root_dir)):
         img_path = os.path.join(root_dir, img_name)
-        img = Image.open(img_path).convert('HSV')
-        img_tensor = normalize_transform(img).unsqueeze(0)
-        #img.thumbnail((1000, 1000))
+        img = Image.open(img_path).convert('RGB')
+        img.thumbnail((1000, 1000), Image.Resampling.LANCZOS)
+        img_tensor = transforms.ToTensor()(img).unsqueeze(0)
 
         with torch.no_grad():
             output = model(img_tensor)
@@ -45,4 +39,5 @@ for d in dirs:
             predicted_class = ids[predicted.item()]
             
         save_path = os.path.join(dataset_save_path, predicted_class, img_name)
-        img.save(save_path)
+        img.save(save_path, "JPEG", quality=100, subsampling=0)
+    
