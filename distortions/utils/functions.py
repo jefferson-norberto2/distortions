@@ -86,7 +86,7 @@ def check_predictions(y_true, y_pred, test_ds, save_path, error_table=None, wand
                     
                     wandb_log_counts[true_class] += 1
 
-def save_results_local_and_wandb(args, test_ds, y_true, y_pred, save_path, accuracy, wandb=None):
+def save_results_local_and_wandb(args: dict, test_ds, y_true, y_pred, save_path, accuracy, wandb=None):
     correct_total = 0
     incorrect_total = 0
     samples_per_class = defaultdict(int)
@@ -113,15 +113,17 @@ def save_results_local_and_wandb(args, test_ds, y_true, y_pred, save_path, accur
             "metrics/total_incorrect": incorrect_total,
         })
 
-    resolution_str = "Unknown"
-    if len(test_ds.samples) > 0:
-        img_path = test_ds.samples[0][0]
-        with PILImage.open(img_path) as img:
-            wi, hi = img.size
-            resolution_str = f"{wi}x{hi}"
-        
-        if wandb is not None:
-            wandb.config.update({"resolution": resolution_str})
+    resolution_str = args.get('imgsz', None)
+    
+    if resolution_str is None:
+        if len(test_ds.samples) > 0:
+            img_path = test_ds.samples[0][0]
+            with PILImage.open(img_path) as img:
+                wi, hi = img.size
+                resolution_str = f"{wi}x{hi}"
+            
+            if wandb is not None:
+                wandb.config.update({"resolution": resolution_str})
 
     info_dict = {
         "Accuracy_percent": float(f"{accuracy:.2f}"),

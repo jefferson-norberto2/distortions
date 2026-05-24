@@ -8,7 +8,6 @@ from torch.utils.data import DataLoader
 from distortions.dataset.single_dataset import SingleDataset
 from distortions.model.custom_mobilenet import CustomMobileNet
 from distortions.utils.functions import generate_confusion_matrix, check_predictions, save_results_local_and_wandb, extract_model_parts
-from distortions.utils.hardware import HardwareProfiler
 from tqdm import tqdm
 
 load_dotenv()
@@ -70,13 +69,6 @@ def test_subset(args: dict):
         v_acc, v_total = 0, 0
         y_true, y_pred = [], []
         
-        profiler = HardwareProfiler(device_index=0)
-
-        print("Running GPU warm-up...")
-        dummy_input = torch.randn(1, 3, 512, 512).to(device)
-        for _ in range(10):
-            _ = model(dummy_input)
-        
         # Mapeamento de índices: classe do subset -> probabilidades do modelo treinado
         class_to_trained_idx = {}
         all_classes_trained = args.get('all_classes_trained', test_ds.class_names)
@@ -99,7 +91,6 @@ def test_subset(args: dict):
                 
                 preds = filtered_outputs.argmax(1)
                 
-                profiler.sample()
                 
                 v_acc += (preds == labels).sum().item()
                 v_total += labels.size(0)
@@ -110,23 +101,16 @@ def test_subset(args: dict):
         args['accuracy'] = accuracy
         print(f"Test Accuracy: {accuracy:.2f}%")
 
-        # Salva métricas de hardware
-        hw_metrics = profiler.save_to_yaml(save_path)
-        wandb.log({"hardware_averages": hw_metrics})
-
         check_predictions(y_true, y_pred, test_ds, save_path, error_table, wandb)
         generate_confusion_matrix(y_true, y_pred, test_ds.class_names, save_path, wandb)
         save_results_local_and_wandb(args, test_ds, y_true, y_pred, save_path, accuracy, wandb)
 
         wandb.log({"misclassified_samples": error_table})
 
-        return profiler.get_raw_data()
-
     except Exception as e:
         print("An error occurred during testing:", str(e))
         import traceback
         traceback.print_exc()
-        return None 
     finally:
         wandb.finish()
         del model 
@@ -135,22 +119,19 @@ def test_subset(args: dict):
 
 
 if __name__ == "__main__":
-    # Configure aqui os parâmetros do seu teste
     args = {
         "base_path": "runs/tested/mobilenet/V1/subset_test",
         "experiment_name": "mobilenet_v1_subset_4classes",
-        "dataset_path": "Datasets/WILD",  # MUDE ISSO
-        "imgsz": 900,
-        "weights_path": '/run/media/jmn/Removable Disk/runs/trained/mobilenet/V1/HSV/best.pt',  # VERIFIQUE O CAMINHO
+        "dataset_path": "Datasets/WILD",
+        "imgsz": 896, # 512 + 256 + 128
+        "weights_path": '/run/media/jmn/Removable Disk/runs/trained/mobilenet/V1/HSV/best.pt',
         "model": "mobilenet_v1",
-        "image_mode": "HSV",
+        "image_mode": "RGB",
         "evaluation_folder": "subset_test",
-        "num_classes_trained": 7,  # Modelo foi treinado com 7 classes
-        "subset_classes": ["awgn", "blur", "contrast", "src"],  # MUDE ISSO - 4 classes do seu subset
-        "all_classes_trained": ["awgn", "blur", "contrast", "fnoise", "jpeg", "jpeg2000", "src"]  # MUDE ISSO - todas as 7 classes
+        "num_classes_trained": 7,  
+        "subset_classes": ["awgn", "blur", "contrast", "src"], 
+        "all_classes_trained": ["awgn", "blur", "contrast", "fnoise", "jpeg", "jpeg2000", "src"]
     }
 
-    raw_data = test_subset(args)
-    
-    if raw_data:
-        print("\n=== Test completed successfully ===")
+    test_subset(args)
+    print("\n=== Test completed successfully ===")
