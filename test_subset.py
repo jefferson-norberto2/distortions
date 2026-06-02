@@ -126,7 +126,7 @@ if __name__ == "__main__":
         "imgsz": 896, # 512 + 256 + 128
         "weights_path": '/run/media/jmn/Removable Disk/runs/trained/mobilenet/V1/HSV/best.pt',
         "model": "mobilenet_v1",
-        "image_mode": "RGB",
+        "image_mode": "LAB",
         "evaluation_folder": "subset_test",
         "num_classes_trained": 7,  
         "subset_classes": ["awgn", "blur", "contrast", "src"], 

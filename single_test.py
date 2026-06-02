@@ -17,11 +17,13 @@ model.eval()
 
 for img_name in images:
     img_path = os.path.join("Datasets/HRIQ/blur", img_name)
-    image = Image.open(img_path).convert("RGB")
+    image = Image.open(img_path)
+    image = image.resize((512, 512))
+    image = image.convert("HSV")
     
     transform = transforms.Compose([
         transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+        transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5]),
     ])
     
     input_tensor = transform(image).unsqueeze(0)

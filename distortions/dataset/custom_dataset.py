@@ -19,13 +19,13 @@ class CustomDataset(Dataset, ABC):
                     self.samples.append((str(img_path), self.class_to_idx[cls_name]))
         
         self.transform_rgb = transforms.Compose([
-            transforms.Resize(self.image_size),
+            #transforms.Resize(self.image_size),
             transforms.ToTensor(),
             transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
         ]) 
 
         self.transform_changed = transforms.Compose([
-            transforms.Resize(self.image_size),
+            #transforms.Resize(self.image_size),
             transforms.ToTensor(),
             transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])
         ])
