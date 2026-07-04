@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 from torch.utils.data import DataLoader
 from distortions.dataset.single_dataset import SingleDataset
 from distortions.model.custom_mobilenet import CustomMobileNet
-from distortions.utils.functions import generate_confusion_matrix, check_predictions, save_results_local_and_wandb, extract_model_parts
+from distortions.utils.functions import generate_confusion_matrix, check_predictions, save_results_local_and_wandb
 from tqdm import tqdm
 
 load_dotenv()
@@ -34,7 +34,7 @@ def test_subset(args: dict):
         name=args['experiment_name'],
         config=args,
         reinit=True,
-        mode=os.getenv("WANDB_MODE", "online")
+        mode=os.getenv("WANDB_MODE", "disabled")
     )
 
     try:
@@ -122,14 +122,14 @@ if __name__ == "__main__":
     args = {
         "base_path": "runs/tested/mobilenet/V1/subset_test",
         "experiment_name": "mobilenet_v1_subset_4classes",
-        "dataset_path": "Datasets/WILD",
+        "dataset_path": "Datasets/Wild",
         "imgsz": 896, # 512 + 256 + 128
-        "weights_path": '/run/media/jmn/Removable Disk/runs/trained/mobilenet/V1/HSV/best.pt',
+        "weights_path": 'runs/trained/mobilenet/V1/HSV/best.pt',
         "model": "mobilenet_v1",
-        "image_mode": "LAB",
+        "image_mode": "HSV",
         "evaluation_folder": "subset_test",
         "num_classes_trained": 7,  
-        "subset_classes": ["awgn", "blur", "contrast", "src"], 
+        "subset_classes": ["awgn", "blur", "contrast", "fnoise", "src"], 
         "all_classes_trained": ["awgn", "blur", "contrast", "fnoise", "jpeg", "jpeg2000", "src"]
     }
 

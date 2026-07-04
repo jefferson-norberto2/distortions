@@ -12,39 +12,56 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 
-def generate_confusion_matrix(y_true, y_pred, class_names, save_path, wandb=None):
+def generate_confusion_matrix(y_true, y_pred, class_names, save_path, name_file="confusion_matrix", wandb=None):
+    # === Definições de tamanho de fonte ===
+    fonte_numeros = 18 # Tamanho dos números dentro dos quadrados
+    fonte_eixos = 18   # Tamanho dos textos "True" e "Predicted"
+    fonte_classes = 18 # Tamanho dos nomes das classes (ticks)
+
     def remove_zero_texts(disp):
         for text_obj in disp.text_.ravel():
             if text_obj.get_text() in ['0', '0.0', '0.00']:
                 text_obj.set_text('')
 
+    # --- MATRIZ PADRÃO ---
     cm = confusion_matrix(y_true, y_pred)
     cm_transposed = cm.T 
     
     fig, ax = plt.subplots(figsize=(10, 8))
     disp = ConfusionMatrixDisplay(confusion_matrix=cm_transposed, display_labels=class_names)
-    disp.plot(cmap=plt.cm.Blues, ax=ax, xticks_rotation='vertical')
+    
+    # Adicionado text_kw para os números
+    disp.plot(cmap=plt.cm.Blues, ax=ax, xticks_rotation='vertical', text_kw={'fontsize': fonte_numeros})
     remove_zero_texts(disp)
     
-    ax.set_xlabel('True')
-    ax.set_ylabel('Predicted')
+    # Adicionado fontsize nos labels
+    ax.set_xlabel('True', fontsize=fonte_eixos)
+    ax.set_ylabel('Predicted', fontsize=fonte_eixos)
+    # Aumentar a fonte do nome das classes (ticks)
+    ax.tick_params(axis='both', which='major', labelsize=fonte_classes)
 
-    standard_cm_path = f"{save_path}/confusion_matrix.png"
+    standard_cm_path = f"{save_path}/{name_file}.png"
     plt.savefig(standard_cm_path, dpi=300, bbox_inches='tight')
     plt.close(fig)
 
+    # --- MATRIZ NORMALIZADA ---
     cm_normalized = confusion_matrix(y_true, y_pred, normalize='true')
     cm_normalized_transposed = np.round(cm_normalized.T, 2)
     
     fig_norm, ax_norm = plt.subplots(figsize=(10, 8))
     disp_normalized = ConfusionMatrixDisplay(confusion_matrix=cm_normalized_transposed, display_labels=class_names)
-    disp_normalized.plot(cmap=plt.cm.Blues, ax=ax_norm, xticks_rotation='vertical')
+    
+    # Adicionado text_kw para os números
+    disp_normalized.plot(cmap=plt.cm.Blues, ax=ax_norm, xticks_rotation='vertical', text_kw={'fontsize': fonte_numeros})
     remove_zero_texts(disp_normalized)
 
-    ax_norm.set_xlabel('True')
-    ax_norm.set_ylabel('Predicted')
+    # Adicionado fontsize nos labels
+    ax_norm.set_xlabel('True', fontsize=fonte_eixos)
+    ax_norm.set_ylabel('Predicted', fontsize=fonte_eixos)
+    # Aumentar a fonte do nome das classes (ticks)
+    ax_norm.tick_params(axis='both', which='major', labelsize=fonte_classes)
 
-    normalized_cm_path = f"{save_path}/confusion_matrix_normalized.png"
+    normalized_cm_path = f"{save_path}/{name_file}_n.png"
     plt.savefig(normalized_cm_path, dpi=300, bbox_inches='tight')
     plt.close(fig_norm)
 

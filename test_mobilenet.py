@@ -84,7 +84,7 @@ def test(args: dict):
         wandb.log({"hardware_averages": hw_metrics})
 
         check_predictions(y_true, y_pred, test_ds, save_path, error_table, wandb)
-        generate_confusion_matrix(y_true, y_pred, test_ds.class_names, save_path, wandb)
+        generate_confusion_matrix(y_true, y_pred, test_ds.class_names, save_path, f"cm_{args['experiment_name']}", wandb)
         save_results_local_and_wandb(args, test_ds, y_true, y_pred, save_path, accuracy, wandb)
 
         wandb.log({"misclassified_samples": error_table})
@@ -103,11 +103,11 @@ def test(args: dict):
 
 
 if __name__ == "__main__":
-    models = ['mobilenet_v1']
-    colors = ['HSV']
+    models = ['mobilenet_v2', 'mobilenet_v3_small', 'mobilenet_v3_large']
+    colors = ['RGB', 'LAB', 'HSV']
     datasets = {
-       # 'test': 'Datasets/LIST/test',
-        'cross_test': '/media/jmn/Removable Disk/Datasets/CSIQ',
+        'test': 'Datasets/LIST/test',
+        'cross_test': 'Datasets/CSIQ',
     }
 
     # Dicionário para acumular leituras
@@ -129,7 +129,7 @@ if __name__ == "__main__":
                     "experiment_name": experiment_id,
                     "dataset_path" : dataset_path,
                     "imgsz": 512,
-                    "weights_path": f'/media/jmn/Removable Disk/runs/trained/mobilenet/V1/HSV/best.pt', 
+                    "weights_path": f'runs/trained/mobilenet/V1/{color}/best.pt', 
                     "model": model_name,
                     "image_mode": color,
                     "evaluation_folder": folder_name
@@ -169,7 +169,7 @@ if __name__ == "__main__":
             }
 
             family, version = extract_model_parts(model_name)
-            model_dir = f"/media/jmn/Removable Disk/runs/trained/{family}/{version}"
+            model_dir = f"/mnt/d/runs/trained/{family}/{version}"
             os.makedirs(model_dir, exist_ok=True)
             
             summary_path = f"{model_dir}/global_hardware_metrics.yaml"
