@@ -15,28 +15,28 @@ class CustomMobileNet(Module):
         self.backbone = self.get_backbone_and_weights(name_model=backbone, pre_trained=pre_trained)
         
         # Adjusting the classifier index based on the chosen architecture
-        if 'v3' in backbone:
+        if 'v3' in backbone.lower():
             num_ftrs = self.backbone.classifier[3].in_features
             self.backbone.classifier[3] = Linear(num_ftrs, num_classes)
-        elif backbone == 'mobilenet_v2':
+        elif 'v2' in backbone.lower():
             num_ftrs = self.backbone.classifier[1].in_features
             self.backbone.classifier[1] = Linear(num_ftrs, num_classes)
-        elif backbone == 'mobilenet_v1':
+        elif 'v1' in backbone.lower():
             # timm models expose the final linear layer directly as 'classifier'
             num_ftrs = self.backbone.classifier.in_features
             self.backbone.classifier = Linear(num_ftrs, num_classes)
     
     def get_backbone_and_weights(self, name_model: str, pre_trained: bool) -> Module:
-        if name_model == 'mobilenet_v3_large':
+        if 'v3_large' in name_model.lower():
             weights = models.MobileNet_V3_Large_Weights.IMAGENET1K_V2 if pre_trained else None
             backbone_model = models.mobilenet_v3_large(weights=weights)
-        elif name_model == 'mobilenet_v3_small':
+        elif 'v3_small' in name_model.lower():
             weights = models.MobileNet_V3_Small_Weights.IMAGENET1K_V1 if pre_trained else None
             backbone_model = models.mobilenet_v3_small(weights=weights)
-        elif name_model == 'mobilenet_v2':
+        elif 'v2' in name_model.lower():
             weights = models.MobileNet_V2_Weights.IMAGENET1K_V1 if pre_trained else None
             backbone_model = models.mobilenet_v2(weights=weights)
-        elif name_model == 'mobilenet_v1':
+        elif 'v1' in name_model.lower():
             # Load MobileNetV1 from Hugging Face timm
             backbone_model = timm.create_model('mobilenetv1_100', pretrained=pre_trained)
         else:
