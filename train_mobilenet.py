@@ -27,7 +27,6 @@ def train(args: dict):
 
     scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args['epochs'], eta_min=1e-6)
     criterion = nn.CrossEntropyLoss()
-    scaler = torch.amp.GradScaler('cuda')
 
     best_acc = 0
     for epoch in range(args['epochs']):
@@ -39,13 +38,13 @@ def train(args: dict):
             x_rgb, labels = x_rgb.to(device), labels.to(device)
             optimizer.zero_grad()
             
-            with torch.amp.autocast('cuda'):
-                outputs = model(x_rgb)
-                loss = criterion(outputs, labels)
+            # --- Início das modificações: Fluxo padrão FP32 sem autocast/scaler ---
+            outputs = model(x_rgb)
+            loss = criterion(outputs, labels)
             
-            scaler.scale(loss).backward()
-            scaler.step(optimizer)
-            scaler.update()
+            loss.backward()
+            optimizer.step()
+            # --- Fim das modificações ---
 
             t_loss += loss.item() * x_rgb.size(0)
             t_acc += (outputs.argmax(1) == labels).sum().item()
@@ -75,23 +74,24 @@ def train(args: dict):
             torch.save(model.state_dict(), logger.save_dir / "best.pt")
             logger.save_final_metrics(y_true, y_pred, train_ds.class_names)
     
-    del model, optimizer, train_loader, val_loader, scaler, criterion
+    # scaler removido do del
+    del model, optimizer, train_loader, val_loader, criterion
     gc.collect()
     torch.cuda.empty_cache()
 
 if __name__ == "__main__":
-    models = ['mobilenet_V1', 'mobilenet_V2', 'mobilenet_V3_small', 'mobilenet_V3_large']
+    models_list = ['mobilenet_V1', 'mobilenet_V2', 'mobilenet_V3_small', 'mobilenet_V3_large']
     colors = ['RGB', 'LAB', 'HSV']
 
     for color in colors:
-        for model in models:
+        for model_name in models_list: 
             args = {
                 'imgsz': 512, 
                 'batch': 32, 
                 'epochs': 30, 
                 'lr': 1e-5, 
                 'dataset_path': 'Datasets/LIST',
-                'model': model,
+                'model': model_name,
                 'image_mode': color
             }
             train(args)
