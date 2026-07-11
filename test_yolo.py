@@ -99,7 +99,7 @@ def test(args: dict):
         wandb.log({"hardware_averages": hw_metrics})
 
         check_predictions(y_true, y_pred, test_ds, save_path, error_table, wandb)
-        generate_confusion_matrix(y_true, y_pred, test_ds.class_names, save_path, wandb)
+        generate_confusion_matrix(y_true, y_pred, test_ds.class_names, 'runs/', f"{args['experiment_name'].lower()}", wandb)
         save_results_local_and_wandb(args, test_ds, y_true, y_pred, save_path, accuracy, wandb)
 
         wandb.log({"misclassified_samples": error_table})
@@ -134,8 +134,8 @@ if __name__ == "__main__":
             for model_name in models:
                 family, version = extract_model_parts(model_name)
 
-                hierarchical_path = f"runs/tested2/{family}/{version}/{folder_name}/{color}"
-                experiment_id = f"{version}_{folder_name}_{color}"
+                hierarchical_path = f"runs/tested/{family}/{version}/{folder_name}/{color}"
+                experiment_id = f"{folder_name}_{version}_{color}"
                 
                 args = {
                     "base_path": hierarchical_path,

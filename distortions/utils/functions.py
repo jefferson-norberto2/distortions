@@ -14,9 +14,9 @@ from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 
 def generate_confusion_matrix(y_true, y_pred, class_names, save_path, name_file="confusion_matrix", wandb=None):
     # === Definições de tamanho de fonte ===
-    fonte_numeros = 18 # Tamanho dos números dentro dos quadrados
-    fonte_eixos = 18   # Tamanho dos textos "True" e "Predicted"
-    fonte_classes = 18 # Tamanho dos nomes das classes (ticks)
+    fonte_numeros = 20 # Tamanho dos números dentro dos quadrados
+    fonte_eixos = 20   # Tamanho dos textos "True" e "Predicted"
+    fonte_classes = 20 # Tamanho dos nomes das classes (ticks)
 
     def remove_zero_texts(disp):
         for text_obj in disp.text_.ravel():

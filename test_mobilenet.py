@@ -84,7 +84,7 @@ def test(args: dict):
         wandb.log({"hardware_averages": hw_metrics})
 
         check_predictions(y_true, y_pred, test_ds, save_path, error_table, wandb)
-        generate_confusion_matrix(y_true, y_pred, test_ds.class_names, save_path, f"cm_{args['experiment_name']}", wandb)
+        generate_confusion_matrix(y_true, y_pred, test_ds.class_names, 'runs', f"cm_{args['experiment_name'].lower()}", wandb)
         save_results_local_and_wandb(args, test_ds, y_true, y_pred, save_path, accuracy, wandb)
 
         wandb.log({"misclassified_samples": error_table})
@@ -103,7 +103,7 @@ def test(args: dict):
 
 
 if __name__ == "__main__":
-    models = ['mobilenet_v2', 'mobilenet_v3_small', 'mobilenet_v3_large']
+    models = ['mobilenet_v1', 'mobilenet_v2', 'mobilenet_v3_small', 'mobilenet_v3_large']
     colors = ['RGB', 'LAB', 'HSV']
     datasets = {
         'test': 'Datasets/LIST/test',
@@ -122,14 +122,14 @@ if __name__ == "__main__":
 
                 hierarchical_path = f"runs/tested/{family}/{version}/{folder_name}/{color}"
                 
-                experiment_id = f"{version}_{folder_name}_{color}"
+                experiment_id = f"{folder_name}_{version}_{color}"
                 
                 args = {
                     "base_path": hierarchical_path,
                     "experiment_name": experiment_id,
                     "dataset_path" : dataset_path,
                     "imgsz": 512,
-                    "weights_path": f'runs/trained/mobilenet/V1/{color}/best.pt', 
+                    "weights_path": f'runs/trained/{family}/{version.upper()}/{color}/best.pt', 
                     "model": model_name,
                     "image_mode": color,
                     "evaluation_folder": folder_name
@@ -169,7 +169,7 @@ if __name__ == "__main__":
             }
 
             family, version = extract_model_parts(model_name)
-            model_dir = f"/mnt/d/runs/trained/{family}/{version}"
+            model_dir = f"runs/trained/{family}/{version.upper()}"
             os.makedirs(model_dir, exist_ok=True)
             
             summary_path = f"{model_dir}/global_hardware_metrics.yaml"
