@@ -29,7 +29,7 @@ Para rodar este projeto localmente, você precisará atender aos seguintes requi
 
 **1. Clone o repositório:**
 ```bash
-git clone https://github.com/jefferson-norberto2/distortions.git -b dissertacao
+git clone https://github.com/jefferson-norberto2/distortions.git
 cd distortions
 ```
 
@@ -40,9 +40,20 @@ cp sample.env .env
 ```
 *(Lembre-se de editar o arquivo `.env` gerado conforme as necessidades e caminhos do seu ambiente).*
 
-**3. Instale as dependências:**
-Recomenda-se o uso de um ambiente virtual (`venv` ou `conda`).
+**3. Crie um ambiente virtual e instale as dependências:**
+Recomenda-se fortemente o uso de um ambiente virtual (`venv`) para isolar as bibliotecas do projeto e evitar conflitos.
+
+*Se você estiver no **Linux ou macOS**:*
 ```bash
+python3.12 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+```
+
+*Se você estiver no **Windows**:*
+```bash
+python -m venv venv
+venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
@@ -85,7 +96,7 @@ python main_test.py yolo
 
 ## 🐳 Execução via Docker
 
-Se você preferir isolar o ambiente e evitar problemas de dependências locais, o projeto já vem configurado com scripts facilitadores para Docker. 
+Se você preferir isolar o ambiente e evitar problemas de dependências locais, o projeto já vem configurado com scripts facilitadores para Docker. Essa é uma excelente alternativa ao uso do ambiente virtual.
 
 > **Aviso:** Estes scripts devem ser executados sempre a partir da **raiz** do repositório.
 
