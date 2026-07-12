@@ -1,15 +1,17 @@
+import gc
+
 import torch
 import torch.nn as nn
 import torch.optim as optim
-import gc
 
 from tqdm import tqdm
 from torch.utils.data import DataLoader
 from distortions.utils.dual_logger import DualLogger
 from distortions.dataset.single_dataset import SingleDataset
-from distortions.model.custom_mobilenet import CustomMobileNet
+from distortions.model.custom_resnet import CustomResNet
 from distortions.utils.functions import extract_model_parts
 from pathlib import Path
+
 
 def train(args: dict):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -19,14 +21,16 @@ def train(args: dict):
     val_ds = SingleDataset(val_path, image_mode=args['image_mode'])
     train_loader = DataLoader(train_ds, batch_size=args['batch'], shuffle=True, num_workers=4)
     val_loader = DataLoader(val_ds, batch_size=args['batch'], shuffle=False, num_workers=4)
-    model = CustomMobileNet(len(train_ds.class_names), True, args['model']).to(device)
+    model = CustomResNet(len(train_ds.class_names), True, args['model']).to(device)
+   
     family, version = extract_model_parts(args['model'])
     logger = DualLogger(args, base_dir=f"runs/trained/{family}/{version}/{args['image_mode']}/train", train_dataset=train_ds, val_dataset=val_ds)
-    
+   
     optimizer = optim.Adam(model.parameters(), lr=args['lr'], weight_decay=1e-4)
 
     scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args['epochs'], eta_min=1e-6)
     criterion = nn.CrossEntropyLoss()
+    scaler = torch.amp.GradScaler('cuda')
 
     best_acc = 0
     for epoch in range(args['epochs']):
@@ -38,13 +42,13 @@ def train(args: dict):
             x_rgb, labels = x_rgb.to(device), labels.to(device)
             optimizer.zero_grad()
             
-            # --- Início das modificações: Fluxo padrão FP32 sem autocast/scaler ---
-            outputs = model(x_rgb)
-            loss = criterion(outputs, labels)
+            with torch.amp.autocast('cuda'):
+                outputs = model(x_rgb)
+                loss = criterion(outputs, labels)
             
-            loss.backward()
-            optimizer.step()
-            # --- Fim das modificações ---
+            scaler.scale(loss).backward()
+            scaler.step(optimizer)
+            scaler.update()
 
             t_loss += loss.item() * x_rgb.size(0)
             t_acc += (outputs.argmax(1) == labels).sum().item()
@@ -74,24 +78,23 @@ def train(args: dict):
             torch.save(model.state_dict(), logger.save_dir / "best.pt")
             logger.save_final_metrics(y_true, y_pred, train_ds.class_names)
     
-    # scaler removido do del
-    del model, optimizer, train_loader, val_loader, criterion
+    del model, optimizer, train_loader, val_loader, scaler, criterion
     gc.collect()
     torch.cuda.empty_cache()
 
-if __name__ == "__main__":
-    models_list = ['mobilenet_V1', 'mobilenet_V2', 'mobilenet_V3_small', 'mobilenet_V3_large']
+def train_resnets():
     colors = ['RGB', 'LAB', 'HSV']
+    models_list = ['resnet18', 'resnet34', 'resnet50', 'resnet101', 'resnet152']
 
-    for color in colors:
-        for model_name in models_list: 
+    for model in models_list:
+        for color in colors:
             args = {
                 'imgsz': 512, 
                 'batch': 32, 
                 'epochs': 30, 
                 'lr': 1e-5, 
+                'model': model, 
                 'dataset_path': 'Datasets/LIST',
-                'model': model_name,
                 'image_mode': color
             }
             train(args)

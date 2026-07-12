@@ -7,7 +7,7 @@ import gc
 from dotenv import load_dotenv
 from torch.utils.data import DataLoader
 from distortions.dataset.dual_dataset import DualDataset
-from distortions.model.dual_stream import DualStream
+from distortions.model.late_fusion import DualStream as LateFusion
 from distortions.utils.functions import generate_confusion_matrix, check_predictions, save_results_local_and_wandb
 from distortions.utils.hardware import HardwareProfiler
 from tqdm import tqdm
@@ -47,7 +47,7 @@ def test(args: dict):
         
         test_loader = DataLoader(test_ds, batch_size=1, shuffle=False, num_workers=4)
         
-        model = DualStream.from_yaml(args['args_path']).to(device)
+        model = LateFusion.from_yaml(args['args_path']).to(device)
         model.load_state_dict(torch.load(args['weights_path'], map_location=device, weights_only=True))
         model.eval()
 
@@ -104,7 +104,7 @@ def test(args: dict):
         torch.cuda.empty_cache()
 
 
-if __name__ == "__main__":
+def run_late_fusion_tests():
     models = ['dual_stream']
     colors = ['HSV']
     datasets = {
@@ -181,3 +181,6 @@ if __name__ == "__main__":
                 yaml.dump({model_name: summary}, f, default_flow_style=False, sort_keys=False)
                 
             print(f"[{VERSION}] Global hardware summary saved to: {summary_path}")
+
+if __name__ == "__main__":
+    run_late_fusion_tests()

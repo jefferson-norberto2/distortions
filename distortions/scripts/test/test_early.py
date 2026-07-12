@@ -109,8 +109,7 @@ def test(args: dict):
         gc.collect()
         torch.cuda.empty_cache()
 
-
-if __name__ == "__main__":
+def run_early_fusion_tests():
     # 4. Updated the model list to loop over the early fusion model
     models = ['early_fusion']
     colors = ['HSV']
@@ -188,3 +187,6 @@ if __name__ == "__main__":
                 yaml.dump({model_name: summary}, f, default_flow_style=False, sort_keys=False)
                 
             print(f"[{VERSION}] Global hardware summary saved to: {summary_path}")
+
+if __name__ == "__main__":
+    run_early_fusion_tests()

@@ -6,8 +6,8 @@ import gc
 
 from dotenv import load_dotenv
 from torch.utils.data import DataLoader
-from distortions.dataset.yolo_dataset import YOLODataset
-from ultralytics import YOLO
+from distortions.dataset.single_dataset import SingleDataset
+from distortions.model.custom_mobilenet import CustomMobileNet
 from distortions.utils.functions import generate_confusion_matrix, check_predictions, save_results_local_and_wandb, extract_model_parts
 from distortions.utils.hardware import HardwareProfiler
 from tqdm import tqdm
@@ -16,7 +16,6 @@ load_dotenv()
 
 def make_save_dir(args):
     base = args['base_path']
-    
     count = 1
     save_path = f"{base}/run_{count}"
     while os.path.exists(save_path):
@@ -28,7 +27,7 @@ def make_save_dir(args):
 
 
 def test(args: dict):
-    project_name = os.getenv("PROJECT_NAME", "Distortions_Evaluation")
+    project_name = os.getenv("PROJECT_NAME")
     wandb.init(
         project=project_name,
         name=args['experiment_name'],
@@ -38,21 +37,17 @@ def test(args: dict):
     )
 
     try:
-        if not args['hardware_evaluation']:
-            if args['image_mode'] == 'LAB':
-                args['dataset_path'] = args['dataset_path'].replace('LIST', 'LIST_LAB').replace('CSIQ', 'CSIQ_LAB')
-            elif args['image_mode'] == 'HSV':
-                args['dataset_path'] = args['dataset_path'].replace('LIST', 'LIST_HSV').replace('CSIQ', 'CSIQ_HSV')
-
         save_path = make_save_dir(args)
         print(f"Results will be saved in: {save_path}")
-        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-        test_ds = YOLODataset(args['dataset_path'], image_mode=args['image_mode'], hardware_evaluation=args['hardware_evaluation'])
-        test_loader = DataLoader(test_ds, batch_size=1, shuffle=False, num_workers=4)
 
+        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        test_ds = SingleDataset(args['dataset_path'], image_mode=args['image_mode'], image_size=(args['imgsz'], args['imgsz']))
         
-        model = YOLO(args['weights_path'])
-        model.to(device)
+        test_loader = DataLoader(test_ds, batch_size=1, shuffle=False, num_workers=4)
+        
+        model = CustomMobileNet(num_classes=len(test_ds.class_names), pre_trained=False, backbone=args['model']).to(device)
+        model.load_state_dict(torch.load(args['weights_path'], map_location=device, weights_only=True))
+        model.eval()
 
         error_table = wandb.Table(columns=["Image", "True Class", "Predicted Class"])
 
@@ -63,27 +58,17 @@ def test(args: dict):
 
         print("Running GPU warm-up...")
         dummy_input = torch.randn(1, 3, 512, 512).to(device)
-        dummy_input_normalized = dummy_input / 255.0
         for _ in range(10):
-            _ = model(dummy_input_normalized, verbose=False)
+            _ = model(dummy_input)
         
         with torch.no_grad():
             pbar_val = tqdm(test_loader, desc=f"Testing {args['experiment_name']}: ")
             for x_rgb, labels in pbar_val:
-                labels = labels.to(device)
+                x_rgb, labels = x_rgb.to(device), labels.to(device)
+                outputs = model(x_rgb)
+                preds = outputs.argmax(1)
                 
-                # Check if x_rgb is a tensor before moving to device
-                # If it's a tuple of paths, YOLO can handle it directly
-                if isinstance(x_rgb, torch.Tensor):
-                    x_rgb = x_rgb.to(device)
-                    
-                # Coleta hardware a cada imagem processada
                 profiler.sample()
-                
-                outputs = model(x_rgb, verbose=False) 
-                
-                preds_list = [r.probs.top1 for r in outputs]
-                preds = torch.tensor(preds_list, device=device)
                 
                 v_acc += (preds == labels).sum().item()
                 v_total += labels.size(0)
@@ -99,7 +84,7 @@ def test(args: dict):
         wandb.log({"hardware_averages": hw_metrics})
 
         check_predictions(y_true, y_pred, test_ds, save_path, error_table, wandb)
-        generate_confusion_matrix(y_true, y_pred, test_ds.class_names, 'runs/', f"{args['experiment_name'].lower()}", wandb)
+        generate_confusion_matrix(y_true, y_pred, test_ds.class_names, f'runs/cm/{args["family"].lower()}', f"{args['experiment_name'].lower()}", wandb)
         save_results_local_and_wandb(args, test_ds, y_true, y_pred, save_path, accuracy, wandb)
 
         wandb.log({"misclassified_samples": error_table})
@@ -116,15 +101,15 @@ def test(args: dict):
         gc.collect()
         torch.cuda.empty_cache()
 
-
-if __name__ == "__main__":
-    models = ['yolo26n', 'yolo26s', 'yolo26m', 'yolo26l', 'yolo26x']
-    colors = ['LAB', 'HSV']
+def run_mobilenet_tests():
+    models = ['mobilenet_v1', 'mobilenet_v2', 'mobilenet_v3_small', 'mobilenet_v3_large']
+    colors = ['RGB', 'LAB', 'HSV']
     datasets = {
         'test': 'Datasets/LIST/test',
-        'cross_test': 'Datasets/CSIQ',
+        'cross': 'Datasets/CSIQ',
     }
 
+    # Dicionário para acumular leituras
     global_hardware_data = {
         m: {'ram': [], 'gpu': [], 'vram': [], 'power': []} for m in models
     }
@@ -135,17 +120,19 @@ if __name__ == "__main__":
                 family, version = extract_model_parts(model_name)
 
                 hierarchical_path = f"runs/tested/{family}/{version}/{folder_name}/{color}"
-                experiment_id = f"{folder_name}_{version}_{color}"
+                
+                experiment_id = f"{folder_name.lower()}_{version.lower()}_{color.lower()}"
                 
                 args = {
                     "base_path": hierarchical_path,
                     "experiment_name": experiment_id,
                     "dataset_path" : dataset_path,
-                    "weights_path": f'runs/trained/{family}/{version}/{color}/best.pt', 
+                    "imgsz": 512,
+                    "weights_path": f'runs/trained/{family}/{version.upper()}/{color}/best.pt', 
                     "model": model_name,
+                    'family': family,
                     "image_mode": color,
-                    "evaluation_folder": folder_name,
-                    "hardware_evaluation": False
+                    "evaluation_folder": folder_name
                 }
 
                 raw_data = test(args)
@@ -182,12 +169,16 @@ if __name__ == "__main__":
             }
 
             family, version = extract_model_parts(model_name)
-            model_dir = f"runs/tested2/{family}/{version}"
+            model_dir = f"runs/trained/{family}/{version.upper()}"
             os.makedirs(model_dir, exist_ok=True)
             
             summary_path = f"{model_dir}/global_hardware_metrics.yaml"
             
+            # Salvando o arquivo
             with open(summary_path, 'w') as f:
                 yaml.dump({model_name: summary}, f, default_flow_style=False, sort_keys=False)
                 
             print(f"[{version}] Global hardware summary saved to: {summary_path}")
+
+if __name__ == "__main__":
+    run_mobilenet_tests()

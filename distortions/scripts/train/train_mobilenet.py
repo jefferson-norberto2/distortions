@@ -1,32 +1,32 @@
 import torch
 import torch.nn as nn
 import torch.optim as optim
+import gc
 
 from tqdm import tqdm
 from torch.utils.data import DataLoader
 from distortions.utils.dual_logger import DualLogger
 from distortions.dataset.single_dataset import SingleDataset
-from distortions.model.custom_inception import CustomInception
+from distortions.model.custom_mobilenet import CustomMobileNet
+from distortions.utils.functions import extract_model_parts
 from pathlib import Path
-
 
 def train(args: dict):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    
     train_path = Path(args['dataset_path']) / 'train'
     val_path = Path(args['dataset_path']) / 'val'
     train_ds = SingleDataset(train_path, image_mode=args['image_mode'])
     val_ds = SingleDataset(val_path, image_mode=args['image_mode'])
     train_loader = DataLoader(train_ds, batch_size=args['batch'], shuffle=True, num_workers=4)
     val_loader = DataLoader(val_ds, batch_size=args['batch'], shuffle=False, num_workers=4)
-    model = CustomInception(len(train_ds.class_names), True).to(device)
-    logger = DualLogger(args, base_dir=f"runs/{args['model']}_{args['image_mode']}", train_dataset=train_ds, val_dataset=val_ds)
+    model = CustomMobileNet(len(train_ds.class_names), True, args['model']).to(device)
+    family, version = extract_model_parts(args['model'])
+    logger = DualLogger(args, base_dir=f"runs/trained/{family}/{version}/{args['image_mode']}/train", train_dataset=train_ds, val_dataset=val_ds)
     
     optimizer = optim.Adam(model.parameters(), lr=args['lr'], weight_decay=1e-4)
 
     scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args['epochs'], eta_min=1e-6)
     criterion = nn.CrossEntropyLoss()
-    scaler = torch.amp.GradScaler('cuda')
 
     best_acc = 0
     for epoch in range(args['epochs']):
@@ -38,25 +38,16 @@ def train(args: dict):
             x_rgb, labels = x_rgb.to(device), labels.to(device)
             optimizer.zero_grad()
             
-            with torch.amp.autocast('cuda'):
-                outputs = model(x_rgb)
-                
-                # Desempacotando as saídas do InceptionOutputs
-                loss1 = criterion(outputs.logits, labels)
-                loss2 = criterion(outputs.aux_logits, labels)
-                
-                # Somando a loss principal com a auxiliar (peso padrão de 0.4)
-                loss = loss1 + 0.4 * loss2
-                
-                # Pegando as predições apenas da saída principal para a acurácia
-                preds = outputs.logits.argmax(1)
+            # --- Início das modificações: Fluxo padrão FP32 sem autocast/scaler ---
+            outputs = model(x_rgb)
+            loss = criterion(outputs, labels)
             
-            scaler.scale(loss).backward()
-            scaler.step(optimizer)
-            scaler.update()
+            loss.backward()
+            optimizer.step()
+            # --- Fim das modificações ---
 
             t_loss += loss.item() * x_rgb.size(0)
-            t_acc += (preds == labels).sum().item()
+            t_acc += (outputs.argmax(1) == labels).sum().item()
             total += labels.size(0)
             pbar.set_postfix(loss=f"{loss.item():.4f}, GPU Memory: {torch.cuda.memory_reserved(device) / 1024**3:.2f} GB")
 
@@ -82,18 +73,25 @@ def train(args: dict):
             best_acc = v_acc/v_total
             torch.save(model.state_dict(), logger.save_dir / "best.pt")
             logger.save_final_metrics(y_true, y_pred, train_ds.class_names)
+    
+    # scaler removido do del
+    del model, optimizer, train_loader, val_loader, criterion
+    gc.collect()
+    torch.cuda.empty_cache()
 
-if __name__ == "__main__":
+def train_mobilenets():
+    models_list = ['mobilenet_V1', 'mobilenet_V2', 'mobilenet_V3_small', 'mobilenet_V3_large']
     colors = ['RGB', 'LAB', 'HSV']
 
     for color in colors:
-        args = {
-             'imgsz': 512, 
+        for model_name in models_list: 
+            args = {
+                'imgsz': 512, 
                 'batch': 32, 
                 'epochs': 30, 
                 'lr': 1e-5, 
-                'model': 'inception_v3', 
-                'dataset_path': f'Datasets/LIST',
+                'dataset_path': 'Datasets/LIST',
+                'model': model_name,
                 'image_mode': color
-        }
-        train(args)
+            }
+            train(args)
