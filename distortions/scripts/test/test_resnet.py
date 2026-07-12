@@ -82,7 +82,7 @@ def test(args: dict):
         wandb.log({"hardware_averages": hw_metrics})
 
         check_predictions(y_true, y_pred, test_ds, save_path, error_table, wandb)
-        generate_confusion_matrix(y_true, y_pred, test_ds.class_names, 'runs',  f"{args['experiment_name'].lower()}", wandb)
+        generate_confusion_matrix(y_true, y_pred, test_ds.class_names, 'runs/cm/resnet',  f"{args['experiment_name'].lower()}", wandb)
         save_results_local_and_wandb(args, test_ds, y_true, y_pred, save_path, accuracy, wandb)
 
         wandb.log({"misclassified_samples": error_table})
@@ -98,13 +98,12 @@ def test(args: dict):
         gc.collect()
         torch.cuda.empty_cache()
 
-
-if __name__ == "__main__":
+def run_resnet_tests():
     models = ['resnet18', 'resnet34', 'resnet50', 'resnet101', 'resnet152']
     colors = ['RGB', 'LAB', 'HSV']
     datasets = {
         'test': 'Datasets/LIST/test',
-        'cross_test': 'Datasets/CSIQ',
+        'cross': 'Datasets/CSIQ',
     }
 
     global_hardware_data = {
@@ -116,7 +115,7 @@ if __name__ == "__main__":
             for model_name in models:
                 family, version = extract_model_parts(model_name)
                 hierarchical_path = f"runs/tested/{family}/{version}/{folder_name}/{color}"
-                experiment_id = f"{folder_name}_{version}_{color}"
+                experiment_id = f"{folder_name.lower()}_{version.lower()}_{color.lower()}"
                 
                 args = {
                     "base_path": hierarchical_path,
@@ -173,3 +172,6 @@ if __name__ == "__main__":
                 yaml.dump({model_name: summary}, f, default_flow_style=False, sort_keys=False)
                 
             print(f"[{version}] Global hardware summary saved to: {summary_path}")
+
+if __name__ == "__main__":
+    run_resnet_tests()

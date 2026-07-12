@@ -8,7 +8,6 @@ from pathlib import Path
 
 from distortions.utils.dual_logger import DualLogger
 from distortions.dataset.dual_dataset import DualDataset
-# 1. Updated import to the new Early Fusion model
 from distortions.model.early_fusion import EarlyFusionAdapter 
 
 FAMILY, VERSION = "early_fusion", "v1"
@@ -105,15 +104,14 @@ def train(args: dict):
             logger.save_final_metrics(y_true, y_pred, train_ds.class_names)
             print(f"🌟 New best model! Accuracy: {best_acc:.4f}")
 
-if __name__ == "__main__":
-    # Note: args dictionary has been updated for single backbone architecture
+def train_early_fusion():
     args = {
         'imgsz': 512, 
         'batch': 32, 
         'epochs': 40, 
         'lr_backbone': 1e-5, 
-        'lr_classifier': 1e-5, # Increased slightly to help the channel_mixer learn faster
-        'backbone': 'mobilenet_v1', # Using a single backbone now
+        'lr_classifier': 1e-5, 
+        'backbone': 'mobilenet_v1',
         'dataset_path': '/run/media/jmn/Removable Disk/Datasets/LIST',
         'image_mode': 'HSV'
     }

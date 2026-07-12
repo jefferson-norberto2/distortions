@@ -40,7 +40,7 @@ def generate_confusion_matrix(y_true, y_pred, class_names, save_path, name_file=
     # Aumentar a fonte do nome das classes (ticks)
     ax.tick_params(axis='both', which='major', labelsize=fonte_classes)
 
-    standard_cm_path = f"{save_path}/{name_file}.png"
+    standard_cm_path = f"{save_path}/{name_file}_abs.png"
     plt.savefig(standard_cm_path, dpi=300, bbox_inches='tight')
     plt.close(fig)
 
@@ -61,7 +61,7 @@ def generate_confusion_matrix(y_true, y_pred, class_names, save_path, name_file=
     # Aumentar a fonte do nome das classes (ticks)
     ax_norm.tick_params(axis='both', which='major', labelsize=fonte_classes)
 
-    normalized_cm_path = f"{save_path}/{name_file}_n.png"
+    normalized_cm_path = f"{save_path}/{name_file}.png"
     plt.savefig(normalized_cm_path, dpi=300, bbox_inches='tight')
     plt.close(fig_norm)
 

@@ -6,7 +6,7 @@ from tqdm import tqdm
 from torch.utils.data import DataLoader
 from distortions.utils.dual_logger import DualLogger
 from distortions.dataset.dual_dataset import DualDataset
-from distortions.model.dual_stream import DualStream
+from distortions.model.late_fusion import DualStream
 from pathlib import Path
 
 FAMILY, VERSION = "dual_stream", "v1"
@@ -101,14 +101,16 @@ def train(args: dict):
             logger.save_final_metrics(y_true, y_pred, train_ds.class_names)
             print(f"🌟 New best model! Accuracy: {best_acc:.4f}")
 
-if __name__ == "__main__":
-    args = {'imgsz': 512, 
-            'batch': 32, 
-            'epochs': 30, 
-            'lr_backbone': 1e-5, 
-            'lr_classifier': 1e-5,
-            'rgb_head': 'resnet50', 
-            'hsv_head': 'mobilenet_v1',
-            'dataset_path': 'Datasets/LIST',
-            'image_mode': 'HSV'}
+def train_late_fusion():
+    args = {
+        'imgsz': 512, 
+        'batch': 32, 
+        'epochs': 30, 
+        'lr_backbone': 1e-5, 
+        'lr_classifier': 1e-5,
+        'rgb_head': 'resnet50', 
+        'hsv_head': 'mobilenet_v1',
+        'dataset_path': 'Datasets/LIST',
+        'image_mode': 'HSV'
+    }
     train(args)
